@@ -1,0 +1,50 @@
+# ---------------------------------------------------------------------------
+# CardioForm Model Manifest
+# ---------------------------------------------------------------------------
+# This file tells the ModelManager where to find the model weights.
+#
+# For local development, it points to files in the `weights/` directory.
+# For distribution, you would add URLs pointing to GitHub Releases.
+# ---------------------------------------------------------------------------
+
+# === 3D Reconstruction Models ===
+reconstruction_3d:
+  # The 'default' tag tells the pipeline which version to use if none is specified.
+  default: local_dev
+  versions:
+    # This is the original model from the project.
+    local_dev:
+      # The 'file://' prefix is crucial. It tells the ModelManager this is a local path.
+      # The path is relative to the project's root directory.
+      url: "file://weights/reconstruct_3d_epoch150_params.pth"
+      sha256: null # No hash verification needed for local files.
+
+la_reconstruction_3d: 
+  default: local_dev
+  versions: 
+    # This is the retrained model. I've given it a new version number.
+    local_dev:
+      url: "file://weights/la_3d_reconstruct_epoch_219_params.pth"
+      sha256: null
+
+# === 2D Segmentation Models (nnUNet) ===
+segment_sax:
+  default: local_dev
+  versions:
+    local_dev:
+      url: "file://weights/sax_segment_checkpoint_final.pth"
+      sha256: null
+
+segment_lax_2ch:
+  default: local_dev
+  versions:
+    local_dev:
+      url: "file://weights/lax_ch2_segment_checkpoint_final.pth"
+      sha256: null
+
+segment_lax_4ch:
+  default: local_dev
+  versions:
+    local_dev:
+      url: "file://weights/lax_ch4_segment_checkpoint_final.pth"
+      sha256: null

@@ -1,0 +1,27 @@
+# pyproject.toml
+
+[project]
+name = "cardio-form"
+version = "0.1.0"
+description = "A pipeline for whole-heart segmentation and 3D reconstruction from CINE MRI."
+readme = "README.md"
+requires-python = ">=3.11"
+
+# These are the direct dependencies of your project.
+# pip will handle resolving sub-dependencies (like numpy).
+dependencies = [
+    "torch",
+    "torchvision",
+    "torchaudio",
+    "nnunetv2",
+    "nibabel",
+    "blosc2",
+    "natsort",
+    "SimpleITK",
+    "batchgenerators",
+    "numpy==1.24.4" # Pinning numpy as per original instructions, can be relaxed later if tests pass
+]
+
+[project.urls]
+Homepage = "https://github.com/OpenHeartDevelopers/cardio-form" # Replace with your repo URL
+Issues = "https://github.com/OpenHeartDevelopers/cardio-form/issues"  # Replace with your repo URL
