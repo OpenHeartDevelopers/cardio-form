@@ -24,34 +24,16 @@ cd cardio-form
 
 ### Step 2: Create and Activate a Virtual Environment
 
-Choose **one** of the following options.
-
-#### Option A: Using `conda`
+#### Using `conda`
 
 This is the recommended approach if you use the Anaconda distribution.
 
 ```bash
 # Create a new conda environment with Python 3.11
-conda create -n cardioform python=3.11 -y
+conda env create -f environment.yaml 
 
 # Activate the environment
 conda activate cardioform
-```
-
-#### Option B: Using `venv` (Python's built-in tool)
-
-This is a lightweight alternative that doesn't require Anaconda.
-
-```bash
-# Create a virtual environment named '.venv' in the project directory
-python -m venv .venv
-
-# Activate the environment
-# On Linux or macOS:
-source .venv/bin/activate
-
-# On Windows (Command Prompt):
-# .venv\Scripts\activate.bat
 ```
 
 ### Step 3: Install PyTorch with CUDA Support
@@ -63,16 +45,6 @@ please visit the [official PyTorch website](https://pytorch.org/get-started/loca
 
 ```bash
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-```
-
-### Step 4: Install CardioForm and Dependencies
-
-Finally, install the `cardio-form` package and all its dependencies defined in the project configuration. 
-This command should be run from the root of the project directory (where `pyproject.toml` is located).
-
-```bash
-# This command installs the project and automatically pulls in all other dependencies.
-pip install .
 ```
 
 After these steps, the pipeline is ready to be used.
