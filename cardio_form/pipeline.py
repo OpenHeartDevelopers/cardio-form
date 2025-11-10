@@ -97,14 +97,16 @@ class CardioForm:
     def reconstruct(
         self, 
         sax_path: str, 
-        lax2ch_path: str, 
-        lax4ch_path: str, 
+        ch2_file_path: str, 
+        ch4_file_path: str, 
         output_dir: str, 
         subject_id: str = None
     ) -> dict:
         """Runs ONLY the 3D reconstruction step of the pipeline."""
         if not subject_id:
             subject_id = os.path.basename(sax_path).split('.')[0]
+            subject_id = f'WH_{subject_id}'
+            subject_id = subject_id.replace('SAX_', '')
             print(f"Subject ID not provided. Inferred as: '{subject_id}'")
 
         print(f"--- Starting 3D Reconstruction for {subject_id} ---")
@@ -113,8 +115,8 @@ class CardioForm:
         # the loading logic. The second time, it will be instant.
         reconstruction_outputs = reconstruct_3d.run_3d_reconstruction(
             sax_file=sax_path,
-            ch2_file=lax2ch_path,
-            ch4_file=lax4ch_path,
+            ch2_file=ch2_file_path,
+            ch4_file=ch4_file_path,
             output_dir=output_dir,
             subject_id=subject_id,
             model=self.recon_model, # Accessing the property, not the _variable

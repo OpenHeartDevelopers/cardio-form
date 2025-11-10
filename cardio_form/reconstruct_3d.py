@@ -3,6 +3,7 @@ import random
 
 import numpy as np
 import nibabel as nib
+import SimpleITK as sitk
 from scipy.ndimage.morphology import binary_erosion
 
 import torch
@@ -101,6 +102,82 @@ class ReconstructUNet3D(nn.Module):
         decode_block1 = self.crop_and_concat(cat_layer1, encode_block1, crop=False)
         final_layer = self.final_layer(decode_block1)
         return final_layer
+    
+## helper 
+# In cardio_form/reconstruct_3d.py
+
+def resample_to_lps(nifti_image: nib.Nifti1Image) -> nib.Nifti1Image:
+    """
+    Resamples a NIfTI image with oblique orientation to standard LPS orientation.
+    
+    This function performs a full geometric resampling. It correctly handles the
+    origin, spacing, and direction matrix of the input image to ensure that the
+    resampled output is geometrically accurate and aligned with the LPS axes.
+    
+    Parameters:
+    -----------
+    nifti_image : nib.Nifti1Image
+        Input NIfTI image with potentially oblique orientation.
+    
+    Returns:
+    --------
+    nib.Nifti1Image
+        Resampled image in canonical LPS orientation with an axis-aligned affine matrix.
+    """
+    # Extract original image properties. CRITICAL: Cast to native Python types.
+    spacing = tuple(float(z) for z in nifti_image.header.get_zooms()[:3])
+    origin = tuple(float(c) for c in nifti_image.affine[:3, 3])
+    size = tuple(int(s) for s in nifti_image.shape[:3])
+    
+    # --- THE CRITICAL FIX: Extract the Direction Matrix ---
+    # The affine is composed of: [R*S | t], where R is rotation, S is scaling, t is translation.
+    # We need to extract the pure rotation component (the direction cosines).
+    affine_3x3 = nifti_image.affine[:3, :3]
+    direction_matrix = np.zeros((3, 3))
+    for i in range(3):
+        col = affine_3x3[:, i]
+        # Normalize each column vector to get the direction cosine
+        direction_matrix[:, i] = col / np.linalg.norm(col)
+    
+    # SimpleITK expects the direction matrix in a flattened, row-major tuple.
+    direction_tuple = tuple(direction_matrix.T.flatten())
+    
+    # --- Create SimpleITK Image with FULL Geometric Information ---
+    # Note: Nibabel data is (x, y, z), SimpleITK expects array data as (z, y, x)
+    sitk_image = sitk.GetImageFromArray(nifti_image.get_fdata().transpose(2, 1, 0))
+    sitk_image.SetSpacing(spacing)
+    sitk_image.SetOrigin(origin)
+    sitk_image.SetDirection(direction_tuple) # <-- THIS WAS THE MISSING PIECE
+    
+    # --- Define the Target LPS Grid ---
+    resampler = sitk.ResampleImageFilter()
+    resampler.SetOutputDirection([1, 0, 0, 0, 1, 0, 0, 0, 1])  # Identity = LPS
+    resampler.SetOutputOrigin(origin) # Keep the same physical origin
+    resampler.SetOutputSpacing(spacing) # Keep the same voxel spacing
+    resampler.SetSize(size) # Keep the same image dimensions
+    resampler.SetInterpolator(sitk.sitkNearestNeighbor)
+    resampler.SetDefaultPixelValue(0)
+    resampler.SetTransform(sitk.Transform()) # We are resampling in place
+    
+    # Execute resampling
+    resampled_sitk = resampler.Execute(sitk_image)
+    
+    # --- Convert Back to Nibabel ---
+    resampled_data = sitk.GetArrayFromImage(resampled_sitk).transpose(2, 1, 0)
+    
+    # Create the new, clean, axis-aligned LPS affine matrix
+    new_affine = np.eye(4)
+    new_affine[0, 0] = spacing[0]
+    new_affine[1, 1] = spacing[1]
+    new_affine[2, 2] = spacing[2]
+    new_affine[:3, 3] = resampled_sitk.GetOrigin() # Get the origin from the resampled image
+    
+    return nib.Nifti1Image(
+        resampled_data.astype(nifti_image.get_data_dtype()), 
+        new_affine
+    )
+
+
 
 SEG_MODE_CHOICES = ['contour', 'plane']
 def extract_label_coordinates(labeled_image, mode='contour'):
@@ -791,7 +868,7 @@ def load_model(model_file: str, device_str: str = 'cpu') -> nn.Module:
     device = torch.device(device_str) 
     is_cpu = device.type == 'cpu'
     unet = ReconstructUNet3D(in_channel=1, out_channel=9)
-    checkpoint = torch.load(model_file)
+    checkpoint = torch.load(model_file, map_location=device)
     unet.load_state_dict(checkpoint['model_state_dict'])
     unet.to(device, dtype=torch.float)
     if not is_cpu:
@@ -801,83 +878,189 @@ def load_model(model_file: str, device_str: str = 'cpu') -> nn.Module:
     
     return unet
 
-def run_3d_reconstruction(model: nn.Module, sax_file: str, ch2_file: str, ch4_file:str, output_dir: str, subject_id: str, device_str:str = 'cpu', compute_bp = True) -> dict : 
+def run_3d_reconstruction(model, sax_file, ch2_file, ch4_file, output_dir, 
+                         subject_id, device_str='cpu', compute_bp=True):
     """
     Run 3D reconstruction from SAX, 2CH, and 4CH NIfTI files.
+    
+    This function orchestrates the complete reconstruction pipeline:
+    1. Loads 2D segmentation data from input NIfTI files
+    2. Projects 2D slices into a sparse 3D volume (oblique coordinate system)
+    3. Runs 3D U-Net to densify the segmentation
+    4. Resamples output to canonical LPS orientation for viewer compatibility
+    5. Optionally back-projects 3D result to 2D slices for validation
+    
+    Parameters:
+    -----------
+    model : nn.Module
+        Pre-loaded 3D U-Net model
+    sax_file : str
+        Path to short-axis NIfTI file
+    ch2_file : str
+        Path to 2-chamber long-axis NIfTI file
+    ch4_file : str
+        Path to 4-chamber long-axis NIfTI file
+    output_dir : str
+        Directory for output files
+    subject_id : str
+        Subject identifier for output filenames
+    device_str : str, optional
+        'cpu' or 'cuda' (default: 'cpu')
+    compute_bp : bool, optional
+        Whether to compute back-projections (default: True)
+    
+    Returns:
+    --------
+    dict
+        Dictionary containing paths to all output files
+    
+    Notes:
+    ------
+    - The intermediate sparse_volume.nii.gz uses oblique coordinates (mathematically correct)
+    - Back-projections use oblique geometry to ensure geometric consistency
+    - Only the final whole_heart_segmentation.nii.gz is resampled to LPS
+    - An additional *_prediction_oblique.nii.gz file is saved for debugging
     """
+    
     if device_str not in ['cpu', 'cuda']:
         raise ValueError("Device must be 'cpu' or 'cuda'")
-
+    
     outputs = ReconstructOutputManager(base_output_dir=output_dir, subject_id=subject_id)
     
-    # Loading model
-    unet = model
-    unet.eval()
-
+    # Set model to evaluation mode
+    model.eval()
+    
+    # ========================================================================
+    # STEP 1: Load all input data
+    # ========================================================================
+    print("Loading input segmentations...")
+    
+    # Load SAX (multi-slice short-axis)
     sax_pc, sax_lb_1, sax_affine = load_contours(sax_file)
     sax_ps, sax_lb_0, sax_ipp, sax_ipo, sax_pxs, sax_lab = load_planes(sax_file)
-
-    ch2_pc, _, ch2_affine = load_contours(ch2_file)
-    ch4_pc, _, ch4_affine = load_contours(ch4_file)
-    ch2_pc = ch2_pc[0]  # Flatten for single slice
-    ch4_pc = ch4_pc[0]  # Flatten for single slice
-
-    ch2_ps, _, ch2_ipp, ch2_ipo, ch2_pxs, ch2_lab = load_planes(ch2_file)
-    ch4_ps, _, ch4_ipp, ch4_ipo, ch4_pxs, ch4_lab = load_planes(ch4_file)
-    ch2_ps = ch2_ps[0]  # Flatten for single slice
-    ch4_ps = ch4_ps[0]  # Flatten for single slice
-
-    # sparse volume generation
-    vol_sp, affine_3d = vol_grid_gen(ch2_ps, ch4_ps, sax_ps, 
-                                     ch2_pc, ch4_pc, sax_pc, 
-                                     sax_ipp, sax_ipo, sax_pxs, sax_lab, 
-                                     ch2_ipp, ch2_ipo, ch2_pxs, ch2_lab, 
-                                     ch4_ipp, ch4_ipo, ch4_pxs, ch4_lab)
     
+    # Load 2CH (2-chamber long-axis)
+    ch2_pc, _, ch2_affine = load_contours(ch2_file)
+    ch2_ps, _, ch2_ipp, ch2_ipo, ch2_pxs, ch2_lab = load_planes(ch2_file)
+    ch2_pc = ch2_pc[0]  # Single slice
+    ch2_ps = ch2_ps[0]
+    
+    # Load 4CH (4-chamber long-axis)
+    ch4_pc, _, ch4_affine = load_contours(ch4_file)
+    ch4_ps, _, ch4_ipp, ch4_ipo, ch4_pxs, ch4_lab = load_planes(ch4_file)
+    ch4_pc = ch4_pc[0]  # Single slice
+    ch4_ps = ch4_ps[0]
+    
+    # ========================================================================
+    # STEP 2: Generate sparse 3D volume (forward projection)
+    # ========================================================================
+    print("Generating sparse 3D volume...")
+    
+    vol_sp, affine_3d = vol_grid_gen(
+        ch2_ps, ch4_ps, sax_ps, 
+        ch2_pc, ch4_pc, sax_pc, 
+        sax_ipp, sax_ipo, sax_pxs, sax_lab, 
+        ch2_ipp, ch2_ipo, ch2_pxs, ch2_lab, 
+        ch4_ipp, ch4_ipo, ch4_pxs, ch4_lab
+    )
+    
+    # Check coordinate system handedness
+    det = np.linalg.det(affine_3d[:3, :3])
+    if det < 0:
+        print("WARNING: Generated affine has negative determinant (left-handed system)")
+    else:
+        print(f"Affine determinant: {det:.4f} (right-handed system)")
+    
+    # Save sparse volume in original oblique coordinates
     vol_sp_nif = nib.Nifti1Image(vol_sp, affine=affine_3d)
     nib.save(vol_sp_nif, outputs.get_path('sparse_volume'))
-
-    # network prediction
-    img_i_ = np.transpose(vol_sp, [1, 0, 2])
-    test_x = img_i_[np.newaxis, np.newaxis, ...] * 30
-    tst_x = Variable(torch.from_numpy(test_x).float().to(unet.device))
-    output = unet(tst_x)
-    prd = output.cpu().detach().numpy()
     
+    # ========================================================================
+    # STEP 3: Run 3D U-Net prediction
+    # ========================================================================
+    print("Running 3D U-Net prediction...")
+    
+    # Prepare input tensor
+    img_transposed = np.transpose(vol_sp, [1, 0, 2])
+    test_x = img_transposed[np.newaxis, np.newaxis, ...] * 30
+    
+    # Move to appropriate device
+    if device_str == 'cuda':
+        tst_x = Variable(torch.from_numpy(test_x).float().cuda())
+    else:
+        tst_x = Variable(torch.from_numpy(test_x).float().cpu())
+    
+    # Forward pass
+    with torch.no_grad():
+        output = model(tst_x)
+    
+    # Extract prediction and clean up
+    prd = output.cpu().detach().numpy()
     del test_x, tst_x, output
-
+    
     if device_str == 'cuda':
         torch.cuda.empty_cache()
-
+    
+    # Convert probabilities to labels
     lab = np.argmax(prd, axis=1)[0, ...]
-    lab_ = np.transpose(lab, [1, 0, 2])
-    prd_nif = nib.Nifti1Image(lab_.astype(float), affine=affine_3d)
-    nib.save(prd_nif, outputs.get_path('prediction'))
-
+    lab_transposed = np.transpose(lab, [1, 0, 2])
+    
+    # Create oblique prediction image
+    oblique_nii = nib.Nifti1Image(lab_transposed.astype(float), affine=affine_3d)
+    
+    # ========================================================================
+    # STEP 4: Resample to canonical LPS orientation
+    # ========================================================================
+    print("Resampling to canonical LPS orientation...")
+    
+    canonical_nii = resample_to_lps(oblique_nii)
+    
+    # Save both versions
+    nib.save(canonical_nii, outputs.get_path('prediction'))
+    
+    # Save oblique version for debugging/validation
+    path_oblique = outputs.get_path('prediction').replace('.nii.gz', '_oblique.nii.gz')
+    nib.save(oblique_nii, path_oblique)
+    print(f"Saved canonical LPS output: {outputs.get_path('prediction')}")
+    print(f"Saved oblique output for reference: {path_oblique}")
+    
+    # ========================================================================
+    # STEP 5: Back-projection (optional, uses oblique geometry)
+    # ========================================================================
     output_dict = outputs.get_all_paths()
-    # back projection 2d
+    
     if compute_bp:
-        ch2_bp, ch4_bp, sax_bp = vol_grid_bp(ch2_ps, ch4_ps, sax_ps,
-                                         ch2_pc, ch4_pc, sax_pc,
-                                         sax_ipp, sax_ipo, sax_pxs, sax_lab,
-                                         ch2_ipp, ch2_ipo, ch2_pxs, ch2_lab,
-                                         ch4_ipp, ch4_ipo, ch4_pxs, ch4_lab,
-                                         lab_)
-        ch2_bp_nif = nib.Nifti1Image(ch2_bp, affine=ch2_affine)
-        nib.save(ch2_bp_nif, outputs.get_path('ch2_bp'))
-        ch4_bp_nif = nib.Nifti1Image(ch4_bp, affine=ch4_affine)
-        nib.save(ch4_bp_nif, outputs.get_path('ch4_bp'))
-        sax_bp_nif = nib.Nifti1Image(sax_bp, affine=sax_affine)
-        nib.save(sax_bp_nif, outputs.get_path('sax_bp'))        
-    else : 
+        print("Computing back-projections...")
+        
+        # Back-project using OBLIQUE geometry (not LPS!)
+        # This ensures geometric consistency with the original slice positions
+        ch2_bp, ch4_bp, sax_bp = vol_grid_bp(
+            ch2_ps, ch4_ps, sax_ps,
+            ch2_pc, ch4_pc, sax_pc,
+            sax_ipp, sax_ipo, sax_pxs, sax_lab,
+            ch2_ipp, ch2_ipo, ch2_pxs, ch2_lab,
+            ch4_ipp, ch4_ipo, ch4_pxs, ch4_lab,
+            lab_transposed  # Use oblique prediction, not canonical!
+        )
+        
+        # Save back-projections
+        nib.save(nib.Nifti1Image(ch2_bp, affine=ch2_affine), 
+                outputs.get_path('ch2_bp'))
+        nib.save(nib.Nifti1Image(ch4_bp, affine=ch4_affine), 
+                outputs.get_path('ch4_bp'))
+        nib.save(nib.Nifti1Image(sax_bp, affine=sax_affine), 
+                outputs.get_path('sax_bp'))
+    else:
         output_dict['ch2_bp'] = ''
         output_dict['ch4_bp'] = ''
         output_dict['sax_bp'] = ''
     
+    print("Reconstruction complete!")
     return output_dict
 
 
-def run_3d_reconstruction(sax_file, ch2_file, ch4_file, save_name_sp, save_name_prd,
+
+def run_3d_reconstruction_legacy(sax_file, ch2_file, ch4_file, save_name_sp, save_name_prd,
                     save_name_sax_bp, save_name_ch2_bp, save_name_ch4_bp,model_dir=None):
     if model_dir is None:
         raise ValueError("model_dir argument must be provided")

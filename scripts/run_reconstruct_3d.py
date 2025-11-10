@@ -18,13 +18,20 @@ def main(args):
     try:
         # Instantiate the main pipeline class, passing the model version and device.
         # This will lazy-load the model when `reconstruct` is called.
-        pipeline = CardioForm(
-            device=args.device, 
-            recon_model_version=args.model_version
-        )
+        pipeline = CardioForm(device=args.device)
     except Exception as e:
         print(f"FATAL: Failed to initialize CardioForm pipeline. Error: {e}")
         return
+    
+    if args.base_folder is not None: 
+        print(f"Setting base folder to: {args.base_folder}, adding to other inputs!")
+        args.sax_file = os.path.join(args.base_folder, args.sax_file)
+        args.ch2_file = os.path.join(args.base_folder, args.ch2_file)
+        args.ch4_file = os.path.join(args.base_folder, args.ch4_file)
+        args.output_dir = os.path.join(args.base_folder, args.output_dir) if args.output_dir != '' else args.base_folder
+    elif args.output_dir == '': 
+        args.output_dir = os.dirname(args.sax_file)
+        print(f"No base folder or output dir provided, defaulting to current working directory: {args.output_dir}")
 
     # --- Run the Reconstruction ---
     # Call the high-level method from our pipeline class.
@@ -46,17 +53,18 @@ if __name__ == "__main__":
     )
     
     # --- Input Arguments ---
-    parser.add_argument("--sax-file", required=True, help="Path to the SAX segmentation NIfTI file.")
-    parser.add_argument("--ch2-file", required=True, help="Path to the LAX 2-chamber segmentation NIfTI file.")
-    parser.add_argument("--ch4-file", required=True, help="Path to the LAX 4-chamber segmentation NIfTI file.")
+    parser.add_argument("-sax", "--sax-file", required=True, help="Path to the SAX segmentation NIfTI file.")
+    parser.add_argument("-ch2", "--ch2-file", required=True, help="Path to the LAX 2-chamber segmentation NIfTI file.")
+    parser.add_argument("-ch4", "--ch4-file", required=True, help="Path to the LAX 4-chamber segmentation NIfTI file.")
     
     # --- Output Arguments ---
-    parser.add_argument("--output-dir", required=True, help="Directory to save all output files.")
+    parser.add_argument("--output-dir", required=False, default='', help="Directory to save all output files.")
     parser.add_argument("--subject-id", help="Optional name for the case. If not provided, it's inferred from the SAX filename.")
     
     # --- Configuration Arguments ---
     parser.add_argument("--model-version", default="default", help="Version of the reconstruction model to use (from models.yaml).")
-    parser.add_argument("--device", default="auto", choices=['auto', 'cpu', 'cuda'], help="Device to run the model on.")
+    parser.add_argument("--device", default="cpu", choices=['cpu', 'cuda'], help="Device to run the model on.")
+    parser.add_argument("--base-folder", default=None, help="Base folder for model caching. Defaults to user cache directory.")
     
     args = parser.parse_args()
     main(args)
