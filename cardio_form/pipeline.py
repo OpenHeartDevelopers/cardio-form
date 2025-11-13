@@ -6,7 +6,7 @@ import torch
 # --- We import our "engines" ---
 # Each of these modules contains complex, low-level logic.
 import cardio_form.reconstruct_3d as reconstruct_3d
-# from . import segment_2d  # We will add this module later
+from cardio_form.segment_2d import segment_2d  
 
 from cardio_form.models  import default_model_manager
 
@@ -55,14 +55,16 @@ class CardioForm:
         return self._recon_model
 
     @property
-    def sax_seg_model(self):
-        """Lazy-loads the SAX segmentation model. (EXAMPLE FOR THE FUTURE)"""
-        if self._sax_seg_model is None:
-            print("Loading SAX segmentation model for the first time...")
-            # model_path = default_model_manager.get_model_path('segment_sax')
-            # self._sax_seg_model = segment_2d.load_model(model_path, self.device)
-            pass # Placeholder for now
-        return self._sax_seg_model
+    def sax_model_dir(self) -> str:
+        """Lazy-gets the path to the SAX segmentation model directory."""
+        if self._sax_model_dir is None:
+            print("Locating SAX segmentation model...")
+            # We are getting the path to the WEIGHTS file.
+            # nnU-Net needs the path to the FOLDER containing this file.
+            weights_path = default_model_manager.get_model_path('segment_sax')
+            # The model directory is two levels up from 'checkpoint_final.pth'
+            self._sax_model_dir = os.path.dirname(os.path.dirname(weights_path))
+        return self._sax_model_dir
     
     @property 
     def la_recon_model(self) : 
@@ -73,23 +75,23 @@ class CardioForm:
             pass 
         self._la_recon_model
 
-    @property 
-    def lax_2ch_seg_model(self) : 
-        if self._lax_2ch_seg_model is None: 
-            print("Loading Model for the first time... ") 
-            # model_path = default_model_manager.get_model_path('ID')
-            # self._lax_2ch_seg_model = segment_2d.load_model(model_path, self.device)
-            pass 
-        self._lax_2ch_seg_model
+    @property
+    def lax2ch_model_dir(self) -> str:
+        """Lazy-gets the path to the LAX 2CH segmentation model directory."""
+        if self._lax2ch_model_dir is None:
+            print("Locating LAX 2CH segmentation model...")
+            weights_path = default_model_manager.get_model_path('segment_lax_2ch')
+            self._lax2ch_model_dir = os.path.dirname(os.path.dirname(weights_path))
+        return self._lax2ch_model_dir
 
-    @property 
-    def lax_4ch_seg_model(self) : 
-        if self._lax_4ch_seg_model is None: 
-            print("Loading Model for the first time... ") 
-            # model_path = default_model_manager.get_model_path('ID')
-            # self._lax_4ch_seg_model = segment_2d.load_model(model_path, self.device)
-            pass 
-        self._lax_4ch_seg_model
+    @property
+    def lax4ch_model_dir(self) -> str:
+        """Lazy-gets the path to the LAX 4CH segmentation model directory."""
+        if self._lax4ch_model_dir is None:
+            print("Locating LAX 4CH segmentation model...")
+            weights_path = default_model_manager.get_model_path('segment_lax_4ch')
+            self._lax4ch_model_dir = os.path.dirname(os.path.dirname(weights_path))
+        return self._lax4ch_model_dir
 
 
     # --- Public Methods ---
@@ -126,17 +128,46 @@ class CardioForm:
         print(f"Reconstruction for {subject_id} complete.")
         return reconstruction_outputs
 
-    # Example of a future method
-    def segment_sax(self, raw_sax_mri_path: str, output_dir: str, subject_id: str):
-        """Runs ONLY the SAX segmentation step. (EXAMPLE FOR THE FUTURE)"""
-        print(f"--- Starting SAX Segmentation for {subject_id} ---")
-        # This would trigger the loading of the SAX model on its first run.
-        # result = segment_2d.run_segmentation(
-        #     input_path=raw_sax_mri_path,
-        #     output_dir=output_dir,
-        #     subject_id=subject_id,
-        #     model=self.sax_seg_model, # Accessing the sax_seg_model property
-        #     device_str=self.device
-        # )
-        # return result
-        pass
+    def segment(self, input_path: str, output_dir: str, view_type: str, subject_id: str = None) -> str:
+        """
+        Runs 2D segmentation for a specific view (SAX, LAX 2CH, or LAX 4CH).
+
+        Args:
+            input_path (str): Path to the input NIfTI file.
+            output_dir (str): Root directory to save the output segmentation.
+            view_type (str): The type of view. Must be one of ['sax', 'lax_2ch', 'lax_4ch'].
+            subject_id (str, optional): Name for the case. Inferred if not provided.
+
+        Returns:
+            The absolute path to the generated segmentation file.
+        """
+        if view_type not in ['sax', 'lax_2ch', 'lax_4ch']:
+            raise ValueError(f"Invalid view_type: '{view_type}'. Must be 'sax', 'lax_2ch', or 'lax_4ch'.")
+        
+        if not subject_id:
+            subject_id = os.path.basename(input_path).split('.')[0]
+
+        print(f"--- Starting {view_type.upper()} Segmentation for {subject_id} ---")
+
+        # 1. Select the correct model directory using our properties
+        model_dir_map = {
+            'sax': self.sax_model_dir,
+            'lax_2ch': self.lax2ch_model_dir,
+            'lax_4ch': self.lax4ch_model_dir
+        }
+        model_dir = model_dir_map[view_type]
+
+        # 2. Define a clean, predictable output path
+        output_filename = f"{subject_id}_seg_{view_type}.nii.gz"
+        subject_output_dir = os.path.join(output_dir, subject_id)
+        os.makedirs(subject_output_dir, exist_ok=True)
+        output_path = os.path.join(subject_output_dir, output_filename)
+
+        # 3. Call the engine to do the work
+        segment_2d.run_segmentation(
+            input_path=input_path,
+            output_path=output_path,
+            model_dir=model_dir,
+            device=self.device
+        )
+        return output_path
