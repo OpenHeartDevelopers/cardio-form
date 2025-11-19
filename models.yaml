@@ -32,19 +32,19 @@ segment_sax:
   default: local_dev
   versions:
     local_dev:
-      url: "file://weights/sax_segment_checkpoint_final.pth"
+      url: "file://weights/segment_sax/fold_all/checkpoint_final.pth"
       sha256: null
 
 segment_lax_2ch:
   default: local_dev
   versions:
     local_dev:
-      url: "file://weights/lax_ch2_segment_checkpoint_final.pth"
+      url: "file://weights/segment_lax_ch2/fold_all/checkpoint_final.pth"
       sha256: null
 
 segment_lax_4ch:
   default: local_dev
   versions:
     local_dev:
-      url: "file://weights/lax_ch4_segment_checkpoint_final.pth"
+      url: "file://weights/segment_lax_ch4/fold_all/checkpoint_final.pth"
       sha256: null

@@ -54,18 +54,6 @@ class CardioForm:
             self._recon_model = reconstruct_3d.load_model(model_path, self.device)
         return self._recon_model
 
-    @property
-    def sax_model_dir(self) -> str:
-        """Lazy-gets the path to the SAX segmentation model directory."""
-        if self._sax_model_dir is None:
-            print("Locating SAX segmentation model...")
-            # We are getting the path to the WEIGHTS file.
-            # nnU-Net needs the path to the FOLDER containing this file.
-            weights_path = default_model_manager.get_model_path('segment_sax')
-            # The model directory is two levels up from 'checkpoint_final.pth'
-            self._sax_model_dir = os.path.dirname(os.path.dirname(weights_path))
-        return self._sax_model_dir
-    
     @property 
     def la_recon_model(self) : 
         if self._la_recon_model is None: 
@@ -76,23 +64,28 @@ class CardioForm:
         self._la_recon_model
 
     @property
-    def lax2ch_model_dir(self) -> str:
-        """Lazy-gets the path to the LAX 2CH segmentation model directory."""
-        if self._lax2ch_model_dir is None:
-            print("Locating LAX 2CH segmentation model...")
-            weights_path = default_model_manager.get_model_path('segment_lax_2ch')
-            self._lax2ch_model_dir = os.path.dirname(os.path.dirname(weights_path))
-        return self._lax2ch_model_dir
+    def sax_model_path(self) -> str: # <-- RENAMED
+        """Lazy-gets the path to the SAX segmentation model CHECKPOINT FILE."""
+        if self._sax_seg_model is None:
+            print("Locating SAX segmentation model...")
+            self._sax_seg_model = default_model_manager.get_model_path('segment_sax')
+        return self._sax_seg_model
 
     @property
-    def lax4ch_model_dir(self) -> str:
-        """Lazy-gets the path to the LAX 4CH segmentation model directory."""
-        if self._lax4ch_model_dir is None:
-            print("Locating LAX 4CH segmentation model...")
-            weights_path = default_model_manager.get_model_path('segment_lax_4ch')
-            self._lax4ch_model_dir = os.path.dirname(os.path.dirname(weights_path))
-        return self._lax4ch_model_dir
+    def lax2ch_model_path(self) -> str: # <-- RENAMED
+        """Lazy-gets the path to the LAX 2CH segmentation model CHECKPOINT FILE."""
+        if self._lax_2ch_seg_model is None:
+            print("Locating LAX 2CH segmentation model...")
+            self._lax_2ch_seg_model = default_model_manager.get_model_path('segment_lax_2ch')
+        return self._lax_2ch_seg_model
 
+    @property
+    def lax4ch_model_path(self) -> str: # <-- RENAMED
+        """Lazy-gets the path to the LAX 4CH segmentation model CHECKPOINT FILE."""
+        if self._lax_4ch_seg_model is None:
+            print("Locating LAX 4CH segmentation model...")
+            self._lax_4ch_seg_model = default_model_manager.get_model_path('segment_lax_4ch')
+        return self._lax_4ch_seg_model
 
     # --- Public Methods ---
 
@@ -150,12 +143,12 @@ class CardioForm:
         print(f"--- Starting {view_type.upper()} Segmentation for {subject_id} ---")
 
         # 1. Select the correct model directory using our properties
-        model_dir_map = {
-            'sax': self.sax_model_dir,
-            'lax_2ch': self.lax2ch_model_dir,
-            'lax_4ch': self.lax4ch_model_dir
+        model_path_map = {
+            'sax': self.sax_model_path,
+            'lax_2ch': self.lax2ch_model_path,
+            'lax_4ch': self.lax4ch_model_path
         }
-        model_dir = model_dir_map[view_type]
+        model_path = model_path_map[view_type]
 
         # 2. Define a clean, predictable output path
         output_filename = f"{subject_id}_seg_{view_type}.nii.gz"
@@ -167,7 +160,7 @@ class CardioForm:
         segment_2d.run_segmentation(
             input_path=input_path,
             output_path=output_path,
-            model_dir=model_dir,
+            model_path=model_path, # Pass the full file path
             device=self.device
         )
         return output_path
