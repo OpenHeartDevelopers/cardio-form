@@ -78,8 +78,7 @@ parameters/*.ini
 parameters/*.conf
 
 # Ignore pth files from models
-weights/*.pth
-
+weights/**/*.pth
 
 .qodo/**
 .qodo
