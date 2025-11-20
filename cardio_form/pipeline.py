@@ -2,7 +2,7 @@
 
 import os
 import torch
-
+import glob
 
 from cardio_form.utils import configure_logging
 logger = configure_logging('CardioFormPipeline')
@@ -20,7 +20,7 @@ class CardioForm:
     A high-level API for the Cardiac MRI processing pipeline.
     This class uses LAZY LOADING for all models to improve efficiency.
     """
-    def __init__(self, device: str = 'auto'):
+    def __init__(self, device: str = 'cpu'):
         """
         Initializes the pipeline. THIS IS A VERY FAST, LIGHTWEIGHT OPERATION.
         No models are loaded at this stage.
@@ -169,3 +169,84 @@ class CardioForm:
             device=self.device
         )
         return output_path
+
+    def run_full_pipeline(self, input_dir: str, output_dir: str, subject_id: str = None):
+        """
+        Runs the full end-to-end pipeline for a single subject.
+
+        This method automatically finds the required CINE images in the input
+        directory, runs 2D segmentation for each view, and then uses those
+        segmentations to run the 3D reconstruction.
+
+        Args:
+            input_dir (str): Path to the directory containing the subject's data.
+            output_dir (str): The root directory for all pipeline outputs.
+            subject_id (str, optional): A unique ID for the subject. If None,
+                                        it is inferred from the input directory name.
+        """
+        if not subject_id:
+            subject_id = os.path.basename(os.path.normpath(input_dir))
+            logger.info(f"Subject ID not provided. Inferred as: '{subject_id}'")
+
+        logger.info(f"\n===== Starting Full Pipeline for Subject: {subject_id} =====")
+
+        # --- 1. Define Paths and Find Input Files ---
+        # Best practice: Create a dedicated folder for all intermediate files.
+        subject_output_dir = os.path.join(output_dir, subject_id)
+        intermediate_dir = os.path.join(subject_output_dir, "intermediate")
+        os.makedirs(intermediate_dir, exist_ok=True)
+        
+        logger.info(f"  - Outputs will be saved in: {subject_output_dir}")
+        logger.info(f"  - Intermediate files in: {intermediate_dir}")
+
+        # Automatically find the required CINE images using glob
+        # This is robust to different subject ID conventions in filenames.
+        try:
+            sax_image_path = glob.glob(os.path.join(input_dir, '*CINE_image_SAX*.nii.gz'))[0]
+            lax2ch_image_path = glob.glob(os.path.join(input_dir, '*CINE_image_CH2*.nii.gz'))[0]
+            lax4ch_image_path = glob.glob(os.path.join(input_dir, '*CINE_image_CH4*.nii.gz'))[0]
+            logger.info("  - Found all required input CINE images.")
+        except IndexError:
+            logger.error("❌ ERROR: Could not find all required input files in the directory.")
+            logger.error("         Please ensure files containing 'CINE_image_SAX', 'CINE_image_CH2', and 'CINE_image_CH4' exist.")
+            return
+
+        # --- 2. Run 2D Segmentation for each view ---
+        logger.info("\n--- Step 1: Running 2D Segmentation ---")
+        
+        # Run SAX Segmentation
+        sax_seg_path = self.segment(
+            input_path=sax_image_path,
+            output_dir=intermediate_dir, # Save to the intermediate folder
+            view_type='sax',
+            subject_id=subject_id 
+        )
+
+        # Run LAX 2CH Segmentation
+        lax2ch_seg_path = self.segment(
+            input_path=lax2ch_image_path,
+            output_dir=intermediate_dir,
+            view_type='lax_2ch',
+            subject_id=subject_id
+        )
+
+        # Run LAX 4CH Segmentation
+        lax4ch_seg_path = self.segment(
+            input_path=lax4ch_image_path,
+            output_dir=intermediate_dir,
+            view_type='lax_4ch',
+            subject_id=subject_id
+        )
+
+        # --- 3. Run 3D Reconstruction ---
+        logger.info("\n--- Step 2: Running 3D Reconstruction ---")
+        
+        self.reconstruct(
+            sax_path=sax_seg_path,
+            ch2_file_path=lax2ch_seg_path,
+            ch4_file_path=lax4ch_seg_path,
+            output_dir=subject_output_dir, # The main output goes in the top-level subject folder
+            subject_id=subject_id
+        )
+
+        logger.info(f"\n===== Full Pipeline for {subject_id} Complete! =====")

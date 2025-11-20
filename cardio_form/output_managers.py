@@ -14,16 +14,17 @@ class ReconstructOutputManager:
             subject_id (str): The unique identifier for the case being processed.
         """
         self.base_dir = os.path.join(base_output_dir, subject_id)
+        self.intermediate_dir = os.path.join(self.base_dir, "intermediate")
         
         # --- Configuration ---
         # This private dictionary defines our entire output structure.
         # It maps a simple key to a tuple: (subdirectory, filename_template)
         self._config = {
-            'prediction': ('', '{subject_id}_whole_heart_segmentation.nii.gz'),
-            'sparse_volume': ('intermediate', '{subject_id}_sparse_volume.nii.gz'),
-            'sax_bp': ('quality_control', '{subject_id}_qc_sax_backprojected.nii.gz'),
-            'ch2_bp': ('quality_control', '{subject_id}_qc_ch2_backprojected.nii.gz'),
-            'ch4_bp': ('quality_control', '{subject_id}_qc_ch4_backprojected.nii.gz'),
+            'prediction': (self.base_dir, '{subject_id}_whole_heart_segmentation.nii.gz'),
+            'sparse_volume': (self.intermediate_dir, '{subject_id}_sparse_volume.nii.gz'),
+            'sax_bp': (self.intermediate_dir, '{subject_id}_qc_sax_backprojected.nii.gz'),
+            'ch2_bp': (self.intermediate_dir, '{subject_id}_qc_ch2_backprojected.nii.gz'),
+            'ch4_bp': (self.intermediate_dir, '{subject_id}_qc_ch4_backprojected.nii.gz'),
         }
 
     def get_path(self, key: str) -> str:
