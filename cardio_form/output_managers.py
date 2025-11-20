@@ -1,7 +1,6 @@
 import os 
 import nibabel as nib
 
-
 class ReconstructOutputManager:
     """
     A simple and robust class to manage the output paths for the pipeline.

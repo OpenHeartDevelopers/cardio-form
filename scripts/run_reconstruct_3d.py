@@ -8,30 +8,32 @@ import argparse
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from cardio_form.pipeline import CardioForm
+from cardio_form.utils import configure_logging
+logger = configure_logging('ScriptReconstruct3D')
 
 def main(args):
     """
     Command-line interface for running the 3D reconstruction step of the CardioForm pipeline.
     """
 
-    print("--- Initializing CardioForm Pipeline ---")
+    logger.info("--- Initializing CardioForm Pipeline ---")
     try:
         # Instantiate the main pipeline class, passing the model version and device.
         # This will lazy-load the model when `reconstruct` is called.
         pipeline = CardioForm(device=args.device)
     except Exception as e:
-        print(f"FATAL: Failed to initialize CardioForm pipeline. Error: {e}")
+        logger.info(f"FATAL: Failed to initialize CardioForm pipeline. Error: {e}")
         return
     
     if args.base_folder is not None: 
-        print(f"Setting base folder to: {args.base_folder}, adding to other inputs!")
+        logger.info(f"Setting base folder to: {args.base_folder}, adding to other inputs!")
         args.sax_file = os.path.join(args.base_folder, args.sax_file)
         args.ch2_file = os.path.join(args.base_folder, args.ch2_file)
         args.ch4_file = os.path.join(args.base_folder, args.ch4_file)
         args.output_dir = os.path.join(args.base_folder, args.output_dir) if args.output_dir != '' else args.base_folder
     elif args.output_dir == '': 
         args.output_dir = os.dirname(args.sax_file)
-        print(f"No base folder or output dir provided, defaulting to current working directory: {args.output_dir}")
+        logger.info(f"No base folder or output dir provided, defaulting to current working directory: {args.output_dir}")
 
     # --- Run the Reconstruction ---
     # Call the high-level method from our pipeline class.
@@ -43,7 +45,7 @@ def main(args):
         subject_id=args.subject_id
     )
     
-    print("\n--- Script finished successfully! ---")
+    logger.info("\n--- Script finished successfully! ---")
 
 
 if __name__ == "__main__":

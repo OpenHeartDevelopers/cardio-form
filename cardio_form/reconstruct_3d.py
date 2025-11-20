@@ -10,6 +10,8 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 
 import cardio_form.geometry as geometry
+from cardio_form.utils import configure_logging
+logger = configure_logging('Reconstruct3D')
 from cardio_form.output_managers import ReconstructOutputManager
 
 # network
@@ -112,7 +114,7 @@ def load_model(model_file: str, device_str: str = 'cpu') -> nn.Module:
         raise FileNotFoundError(f"Model checkpoint not found at {model_file}")    
     
     # Loading model
-    print(f'Loading model on device: {device_str}')
+    logger.info(f'Loading model on device: {device_str}')
     device = torch.device(device_str) 
     is_cpu = device.type == 'cpu'
     unet = ReconstructUNet3D(in_channel=1, out_channel=9)
@@ -181,7 +183,7 @@ def run_3d_reconstruction(model, sax_file, ch2_file, ch4_file, output_dir,
     # ========================================================================
     # STEP 1: Load all input data
     # ========================================================================
-    print("Loading input segmentations...")
+    logger.info("Loading input segmentations...")
     
     # Load SAX (multi-slice short-axis)
     sax_pc, _, sax_affine = geometry.load_sax_contour_geometry(sax_file)
@@ -197,7 +199,7 @@ def run_3d_reconstruction(model, sax_file, ch2_file, ch4_file, output_dir,
     # ========================================================================
     # STEP 2: Generate sparse 3D volume (forward projection)
     # ========================================================================
-    print("Generating sparse 3D volume...")
+    logger.info("Generating sparse 3D volume...")
     
     vol_sp, affine_3d = geometry.vol_grid_gen(
         ch2_ps, ch4_ps, sax_ps, 
@@ -210,9 +212,9 @@ def run_3d_reconstruction(model, sax_file, ch2_file, ch4_file, output_dir,
     # Check coordinate system handedness
     det = np.linalg.det(affine_3d[:3, :3])
     if det < 0:
-        print("WARNING: Generated affine has negative determinant (left-handed system)")
+        logger.info("WARNING: Generated affine has negative determinant (left-handed system)")
     else:
-        print(f"Affine determinant: {det:.4f} (right-handed system)")
+        logger.info(f"Affine determinant: {det:.4f} (right-handed system)")
     
     # Save sparse volume in original oblique coordinates
     vol_sp_nif = nib.Nifti1Image(vol_sp, affine=affine_3d)
@@ -221,7 +223,7 @@ def run_3d_reconstruction(model, sax_file, ch2_file, ch4_file, output_dir,
     # ========================================================================
     # STEP 3: Run 3D U-Net prediction
     # ========================================================================
-    print("Running 3D U-Net prediction...")
+    logger.info("Running 3D U-Net prediction...")
     
     # Prepare input tensor
     img_transposed = np.transpose(vol_sp, [1, 0, 2])
@@ -254,7 +256,7 @@ def run_3d_reconstruction(model, sax_file, ch2_file, ch4_file, output_dir,
     # ========================================================================
     # STEP 4: Resample to canonical LPS orientation
     # ========================================================================
-    print("Resampling to canonical LPS orientation...")
+    logger.info("Resampling to canonical LPS orientation...")
     
     canonical_nii = geometry.resample_to_lps(oblique_nii)
     path_canonical = outputs.get_path('prediction').replace('.nii.gz', '_canonical.nii.gz')
@@ -264,8 +266,8 @@ def run_3d_reconstruction(model, sax_file, ch2_file, ch4_file, output_dir,
     # Save oblique version for debugging/validation
     path_oblique = outputs.get_path('prediction') #.replace('.nii.gz', '_oblique.nii.gz')
     nib.save(oblique_nii, path_oblique)
-    print(f"Saved canonical LPS output: {path_canonical}")
-    print(f"Saved oblique output for reference: {path_oblique}")
+    logger.info(f"Saved canonical LPS output: {path_canonical}")
+    logger.info(f"Saved oblique output for reference: {path_oblique}")
     
     # ========================================================================
     # STEP 5: Back-projection (optional, uses oblique geometry)
@@ -273,7 +275,7 @@ def run_3d_reconstruction(model, sax_file, ch2_file, ch4_file, output_dir,
     output_dict = outputs.get_all_paths()
     
     if compute_bp:
-        print("Computing back-projections...")
+        logger.info("Computing back-projections...")
         
         # Back-project using OBLIQUE geometry (not LPS!)
         # This ensures geometric consistency with the original slice positions
@@ -298,5 +300,5 @@ def run_3d_reconstruction(model, sax_file, ch2_file, ch4_file, output_dir,
         output_dict['ch4_bp'] = ''
         output_dict['sax_bp'] = ''
     
-    print("Reconstruction complete!")
+    logger.info("Reconstruction complete!")
     return output_dict

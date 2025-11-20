@@ -3,12 +3,17 @@
 import os
 import torch
 
-# --- We import our "engines" ---
+
+from cardio_form.utils import configure_logging
+logger = configure_logging('CardioFormPipeline')
+
 # Each of these modules contains complex, low-level logic.
 import cardio_form.reconstruct_3d as reconstruct_3d
 import cardio_form.segment_2d as segment_2d  
 
 from cardio_form.models  import default_model_manager
+
+CHOICES_VIEW_TYPE = ['sax', 'lax_2ch', 'lax_4ch']
 
 class CardioForm:
     """
@@ -28,7 +33,7 @@ class CardioForm:
         else:
             self.device = device
         
-        print(f"CardioForm pipeline configured for device: '{self.device}'")
+        logger.info(f"CardioForm pipeline configured for device: '{self.device}'")
         
         # --- State variables ---
         # We store the model OBJECTS here, but initialize them to None.
@@ -49,7 +54,7 @@ class CardioForm:
         On all subsequent calls, it will instantly return the already-loaded model.
         """
         if self._recon_model is None:
-            print("Loading reconstruction model for the first time...")
+            logger.info("Loading reconstruction model for the first time...")
             model_path = default_model_manager.get_model_path('reconstruction_3d')
             self._recon_model = reconstruct_3d.load_model(model_path, self.device)
         return self._recon_model
@@ -57,7 +62,7 @@ class CardioForm:
     @property 
     def la_recon_model(self) : 
         if self._la_recon_model is None: 
-            print("Loading Model for the first time... ") 
+            logger.info("Loading Model for the first time... ") 
             # model_path = default_model_manager.get_model_path('ID')
             # self._la_recon_model = segment_2d.load_model(model_path, self.device)
             pass 
@@ -67,7 +72,7 @@ class CardioForm:
     def sax_model_path(self) -> str: # <-- RENAMED
         """Lazy-gets the path to the SAX segmentation model CHECKPOINT FILE."""
         if self._sax_seg_model is None:
-            print("Locating SAX segmentation model...")
+            logger.info("Locating SAX segmentation model...")
             self._sax_seg_model = default_model_manager.get_model_path('segment_sax')
         return self._sax_seg_model
 
@@ -75,7 +80,7 @@ class CardioForm:
     def lax2ch_model_path(self) -> str: # <-- RENAMED
         """Lazy-gets the path to the LAX 2CH segmentation model CHECKPOINT FILE."""
         if self._lax_2ch_seg_model is None:
-            print("Locating LAX 2CH segmentation model...")
+            logger.info("Locating LAX 2CH segmentation model...")
             self._lax_2ch_seg_model = default_model_manager.get_model_path('segment_lax_2ch')
         return self._lax_2ch_seg_model
 
@@ -83,7 +88,7 @@ class CardioForm:
     def lax4ch_model_path(self) -> str: # <-- RENAMED
         """Lazy-gets the path to the LAX 4CH segmentation model CHECKPOINT FILE."""
         if self._lax_4ch_seg_model is None:
-            print("Locating LAX 4CH segmentation model...")
+            logger.info("Locating LAX 4CH segmentation model...")
             self._lax_4ch_seg_model = default_model_manager.get_model_path('segment_lax_4ch')
         return self._lax_4ch_seg_model
 
@@ -102,9 +107,9 @@ class CardioForm:
             subject_id = os.path.basename(sax_path).split('.')[0]
             subject_id = f'WH_{subject_id}'
             subject_id = subject_id.replace('SAX_', '')
-            print(f"Subject ID not provided. Inferred as: '{subject_id}'")
+            logger.info(f"Subject ID not provided. Inferred as: '{subject_id}'")
 
-        print(f"--- Starting 3D Reconstruction for {subject_id} ---")
+        logger.info(f"--- Starting 3D Reconstruction for {subject_id} ---")
 
         # The first time this method is called, self.recon_model will trigger
         # the loading logic. The second time, it will be instant.
@@ -118,7 +123,7 @@ class CardioForm:
             device_str=self.device
         )
         
-        print(f"Reconstruction for {subject_id} complete.")
+        logger.info(f"Reconstruction for {subject_id} complete.")
         return reconstruction_outputs
 
     def segment(self, input_path: str, output_dir: str, view_type: str, subject_id: str = None) -> str:
@@ -134,13 +139,13 @@ class CardioForm:
         Returns:
             The absolute path to the generated segmentation file.
         """
-        if view_type not in ['sax', 'lax_2ch', 'lax_4ch']:
-            raise ValueError(f"Invalid view_type: '{view_type}'. Must be 'sax', 'lax_2ch', or 'lax_4ch'.")
+        if view_type not in CHOICES_VIEW_TYPE:
+            raise ValueError(f"Invalid view_type: '{view_type}'. Must be one of [{'|'.join(CHOICES_VIEW_TYPE)}].")
         
         if not subject_id:
             subject_id = os.path.basename(input_path).split('.')[0]
 
-        print(f"--- Starting {view_type.upper()} Segmentation for {subject_id} ---")
+        logger.info(f"--- Starting {view_type.upper()} Segmentation for {subject_id} ---")
 
         # 1. Select the correct model directory using our properties
         model_path_map = {

@@ -5,6 +5,9 @@ import urllib.request
 from pathlib import Path
 from tqdm import tqdm
 
+from cardio_form.utils import configure_logging
+logger = configure_logging(__name__)
+
 # --- Helper for TQDM progress bar ---
 class TqdmUpTo(tqdm):
     """Provides `update_to(block_num, block_size, total_size)`."""
@@ -98,24 +101,24 @@ class ModelManager:
         cached_path = self.cache_dir / filename
 
         if cached_path.exists():
-            print(f"Found model '{filename}' in cache. Verifying integrity...")
+            logger.info(f"Found model '{filename}' in cache. Verifying integrity...")
             try:
                 if self._verify_hash(cached_path, expected_hash):
-                    print("Integrity check passed.")
+                    logger.info("Integrity check passed.")
                     return str(cached_path)
             except IOError as e:
-                print(f"Integrity check failed: {e}. Re-downloading...")
+                logger.info(f"Integrity check failed: {e}. Re-downloading...")
                 os.remove(cached_path)
 
         # File needs to be downloaded
-        print(f"Downloading model '{filename}' from {url}...")
+        logger.info(f"Downloading model '{filename}' from {url}...")
         try:
             with TqdmUpTo(unit='B', unit_scale=True, unit_divisor=1024, miniters=1, desc=filename) as t:
                 urllib.request.urlretrieve(url, filename=str(cached_path), reporthook=t.update_to)
             
-            print("Download complete. Verifying integrity...")
+            logger.info("Download complete. Verifying integrity...")
             if self._verify_hash(cached_path, expected_hash):
-                print("Integrity check passed.")
+                logger.info("Integrity check passed.")
                 return str(cached_path)
         except Exception as e:
             # Clean up partial download on failure

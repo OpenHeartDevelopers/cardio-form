@@ -5,7 +5,9 @@ import sys
 import argparse
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from cardio_form.pipeline import CardioForm
+from cardio_form.pipeline import CardioForm, CHOICES_VIEW_TYPE
+from cardio_form.utils import configure_logging
+logger = configure_logging('ScriptSegment2D')
 
 def main():
     parser = argparse.ArgumentParser(
@@ -15,14 +17,14 @@ def main():
     
     parser.add_argument("--input", required=True, help="Path to the input NIfTI file.")
     parser.add_argument("--output-dir", required=True, help="Root directory to save the output segmentation.")
-    parser.add_argument("--view-type", required=True, choices=['sax', 'lax_2ch', 'lax_4ch'], 
+    parser.add_argument("--view-type", required=True, choices=CHOICES_VIEW_TYPE, 
                         help="The type of cardiac view to segment.")
     parser.add_argument("--subject-id", help="Optional name for the case. Inferred from input filename if not provided.")
     parser.add_argument("--device", default="auto", choices=['auto', 'cpu', 'cuda'], help="Device to run the model on.")
     
     args = parser.parse_args()
 
-    print("--- Initializing CardioForm Pipeline ---")
+    logger.info("--- Initializing CardioForm Pipeline ---")
     pipeline = CardioForm(device=args.device)
 
     # Call the high-level segment method from our pipeline class
@@ -33,7 +35,7 @@ def main():
         subject_id=args.subject_id
     )
     
-    print("\n--- Script finished successfully! ---")
+    logger.info("\n--- Script finished successfully! ---")
 
 if __name__ == "__main__":
     main()

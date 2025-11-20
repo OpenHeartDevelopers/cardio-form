@@ -5,6 +5,9 @@ import numpy as np
 import nibabel as nib
 import SimpleITK as sitk
 
+from cardio_form.utils import configure_logging
+logger = configure_logging(__name__)
+
 # constants
 VOXEL_SAMPLING_DIST = 10  # in mm
 GRID_SIZE = 160  # in voxels
@@ -390,7 +393,7 @@ def vol_grid_gen(ch2_ps, ch4_ps, sax_ps,
                                                                          pq_2ch[ki][1].astype(int),
                                                                          0].astype(int)]
         except:
-            print('Out of box voxels.', end='\r')
+            logger.info('Out of box voxels.')
     # 4ch
     d4 = np.dot(xyz_v - ch4_pc[0][:, 0], n_4ch)
     i_4ch = np.where(np.abs(d4) <= vs)[0]
@@ -408,7 +411,7 @@ def vol_grid_gen(ch2_ps, ch4_ps, sax_ps,
                                                                          pq_4ch[ki][1].astype(int),
                                                                          0].astype(int)]
         except:
-            print('Out of box voxels.', end='\r')
+            logger.info('Out of box voxels.')
     # sax
     ns = len(sax_pc)
     for ks in range(ns):
@@ -431,7 +434,7 @@ def vol_grid_gen(ch2_ps, ch4_ps, sax_ps,
                                                                                 pq_sax[ki][1].astype(int),
                                                                                 ks].astype(int)]
             except:
-                print('Out of box voxels.', end='\r')
+                logger.info('Out of box voxels.')
     return vol_sp, affine_3d
 
 def vol_grid_bp(ch2_ps, ch4_ps, sax_ps,
@@ -462,7 +465,7 @@ def vol_grid_bp(ch2_ps, ch4_ps, sax_ps,
                                          ijk_v_[i_2ch[ki]][1].astype(int),
                                          ijk_v_[i_2ch[ki]][2].astype(int)].astype(int)]
         except:
-            print('Out of box voxels.', end='\r')
+            logger.info('Out of box voxels.')
     # 4ch
     d4 = np.dot(xyz_v - ch4_pc[0][:, 0], n_4ch)
     i_4ch = np.where(np.abs(d4) <= vs)[0]
@@ -481,7 +484,7 @@ def vol_grid_bp(ch2_ps, ch4_ps, sax_ps,
                                          ijk_v_[i_4ch[ki]][1].astype(int),
                                          ijk_v_[i_4ch[ki]][2].astype(int)].astype(int)]
         except:
-            print('Out of box voxels.', end='\r')
+            logger.info('Out of box voxels.')
     # sax
     ns = len(sax_pc)
     sax_bp = np.zeros(np.shape(sax_lab))
@@ -504,7 +507,7 @@ def vol_grid_bp(ch2_ps, ch4_ps, sax_ps,
                                               ijk_v_[i_ks[ki]][1].astype(int),
                                               ijk_v_[i_ks[ki]][2].astype(int)].astype(int)]
             except:
-                print('Out of box voxels.', end='\r')
+                logger.info('Out of box voxels.')
     return ch2_bp, ch4_bp, sax_bp
 
 ## post processing helpers 

@@ -6,6 +6,9 @@ import SimpleITK as sitk
 from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
 from nnunetv2.imageio.simpleitk_reader_writer import SimpleITKIO
 
+from cardio_form.utils import configure_logging
+logger = configure_logging('Segment2D')
+
 def run_segmentation(
     input_path: str,
     output_path: str,
@@ -27,10 +30,10 @@ def run_segmentation(
     model_dir = os.path.dirname(os.path.dirname(model_path)) # nnU-Net needs the parent of the 'fold_all' folder
     checkpoint_name = os.path.basename(model_path)
     
-    print(f"--- Starting nnU-Net Segmentation ---")
-    print(f"  Input: {input_path}")
-    print(f"  Model Directory: {model_dir}")
-    print(f"  Checkpoint: {checkpoint_name}")
+    logger.info(f"--- Starting nnU-Net Segmentation ---")
+    logger.info(f"  Input: {input_path}")
+    logger.info(f"  Model Directory: {model_dir}")
+    logger.info(f"  Checkpoint: {checkpoint_name}")
 
     # 1. Instantiate the nnUNetPredictor with standard settings
     predictor = nnUNetPredictor(
@@ -54,7 +57,7 @@ def run_segmentation(
     img, props = SimpleITKIO().read_images([input_path])
     
     # 4. Run prediction
-    print("  Running prediction...")
+    logger.info("  Running prediction...")
     pred_array = predictor.predict_single_npy_array(img, props, None, None, False)
     
     # 5. Save the output image, preserving original geometry
@@ -67,5 +70,5 @@ def run_segmentation(
 
     sitk.WriteImage(pred_image, output_path, useCompression=True)
     
-    print(f"  Segmentation complete. Output saved to: {output_path}")
+    logger.info(f"  Segmentation complete. Output saved to: {output_path}")
     return output_path
