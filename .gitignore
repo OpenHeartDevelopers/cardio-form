@@ -84,3 +84,4 @@ weights/**/*.pth
 .qodo
 .vscode/**
 .vscode
+CARDIOFORM_ENV_SETUP

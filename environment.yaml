@@ -17,25 +17,27 @@ dependencies:
   - torchvision=0.20.1
   - torchaudio=2.5.1
   - pytorch-cuda=11.8 # This is the key constraint for CUDA
-  - mkl                 # Ensure Intel MKL is included
+  #- mkl                 # Ensure Intel MKL is included
   - pip                 # Explicitly include pip as requested by the warning
 
   # === Other Conda-managed packages ===
   # These are often more stable when installed from conda-forge.
-  - pandas
-  - scikit-learn
-  - scikit-image
-  - seaborn
-  - nibabel
-  - pydicom
-  - pyyaml
-  - tqdm
-  - yacs
+  #- pandas
+  #- scikit-learn
+  #- scikit-image
+  #- seaborn
+  #- nibabel
+  #- pydicom
+  #- pyyaml
+  #- tqdm
+  #- yacs
   - simpleitk
 
   # === Pip-managed packages ===
   # These are pure-python or have dependencies that pip handles well.
   - pip:
-    - nnunetv2==2.5.2
-    - batchgenerators==0.25.1
-    - natsort==8.4.0
+    - nnunetv2
+    - blosc2
+    - numpy==1.24.4
+    - natsort
+    - batchgenerators

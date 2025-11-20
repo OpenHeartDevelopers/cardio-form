@@ -6,7 +6,7 @@ import torch
 # --- We import our "engines" ---
 # Each of these modules contains complex, low-level logic.
 import cardio_form.reconstruct_3d as reconstruct_3d
-from cardio_form.segment_2d import segment_2d  
+import cardio_form.segment_2d as segment_2d  
 
 from cardio_form.models  import default_model_manager
 
