@@ -24,7 +24,7 @@ def main():
                         help="Path to the root directory where all outputs will be saved.")
     parser.add_argument("--subject-id", 
                         help="Optional name for the case. If not provided, it's inferred from the input directory name.")
-    parser.add_argument("--device", default="auto", choices=['auto', 'cpu', 'cuda'],
+    parser.add_argument("--device", default="cpu", choices=['auto', 'cpu', 'cuda'],
                         help="Device to run the models on.")
     
     args = parser.parse_args()
