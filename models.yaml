@@ -10,8 +10,11 @@
 # === 3D Reconstruction Models ===
 reconstruction_3d:
   # The 'default' tag tells the pipeline which version to use if none is specified.
-  default: local_dev
+  default: v0.1.0
   versions:
+    v0.1.0:
+      url: "https://github.com/OpenHeartDevelopers/cardio-form/releases/download/v0.1.0-models/reconstruct_3d_epoch150_params.zip"
+      sha256: fe694d4c16d9272b9d6925bb8779b2086b55ebb6ec1394a027a3c6ee5a4d83c6
     # This is the original model from the project.
     local_dev:
       # The 'file://' prefix is crucial. It tells the ModelManager this is a local path.
@@ -20,8 +23,11 @@ reconstruction_3d:
       sha256: null # No hash verification needed for local files.
 
 la_reconstruction_3d: 
-  default: local_dev
-  versions: 
+  default: v0.1.0
+  versions:
+    v0.1.0:
+      url: "https://github.com/OpenHeartDevelopers/cardio-form/releases/download/v0.1.0-models/la_3d_reconstruct_epoch_219_params.zip" 
+      sha256:  731455c69508467e749f1c4d5d7d56c3713069d6ce5453391e0577ded5e7b0ef
     # This is the retrained model. I've given it a new version number.
     local_dev:
       url: "file://weights/la_3d_reconstruct_epoch_219_params.pth"
@@ -29,22 +35,31 @@ la_reconstruction_3d:
 
 # === 2D Segmentation Models (nnUNet) ===
 segment_sax:
-  default: local_dev
+  default: v0.1.0
   versions:
+    v0.1.0:
+      url: "https://github.com/OpenHeartDevelopers/cardio-form/releases/download/v0.1.0-models/segment_sax.zip" 
+      sha256: 821e690627a084bf5a2767c939c24f8dc562820e997c664daad9631dd186c8cf
     local_dev:
       url: "file://weights/segment_sax/fold_all/checkpoint_final.pth"
       sha256: null
 
 segment_lax_2ch:
-  default: local_dev
+  default: v0.1.0
   versions:
+    v0.1.0:
+      url: "https://github.com/OpenHeartDevelopers/cardio-form/releases/download/v0.1.0-models/segment_lax_ch2.zip" 
+      sha256: 003420fc6012e94d5591ca0b6e1b3c2ea0c6c02eaacc8e9037d7419894f87ab0
     local_dev:
       url: "file://weights/segment_lax_ch2/fold_all/checkpoint_final.pth"
       sha256: null
 
 segment_lax_4ch:
-  default: local_dev
+  default: v0.1.0
   versions:
+    v0.1.0:
+      url: "https://github.com/OpenHeartDevelopers/cardio-form/releases/download/v0.1.0-models/segment_lax_ch4.zip" 
+      sha256: 64d92e663d49b0d56d84a395768ed978ad3fc9d8a45976f26e82833d626d0bc7
     local_dev:
       url: "file://weights/segment_lax_ch4/fold_all/checkpoint_final.pth"
       sha256: null
