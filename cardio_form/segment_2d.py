@@ -73,9 +73,11 @@ def run_segmentation(
     pred_image.SetSpacing(props['sitk_stuff']['spacing'])
 
     # --- Construct the output path ---
-    # The filename is now created consistently inside the function.
     output_filename = f"{output_prefix}_2D_seg_{view_type}.nii.gz"
     final_output_path = os.path.join(output_dir, output_filename)
+    
+    # Ensure the full directory path exists before trying to write the file.
+    os.makedirs(os.path.dirname(final_output_path), exist_ok=True)
 
     sitk.WriteImage(pred_image, final_output_path, useCompression=True)
     

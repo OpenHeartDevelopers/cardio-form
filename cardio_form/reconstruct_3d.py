@@ -175,7 +175,7 @@ def run_3d_reconstruction(model, sax_file, ch2_file, ch4_file, output_dir,
     if device_str not in ['cpu', 'cuda']:
         raise ValueError("Device must be 'cpu' or 'cuda'")
     
-    outputs = OutputManager(base_output_dir=output_dir, output_prefix=output_prefix)
+    outputs = OutputManager(output_dir=output_dir, output_prefix=output_prefix)
     
     # Set model to evaluation mode
     model.eval()

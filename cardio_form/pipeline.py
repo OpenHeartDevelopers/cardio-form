@@ -175,6 +175,10 @@ class CardioForm:
         logger.info(f"\n===== Starting Full Pipeline for prefix: {output_prefix} =====")
         logger.info(f"  - All outputs will be saved in: {output_dir}")
 
+        # Proactively create the output directory. The -p in `mkdir -p`.
+        logger.info(f"Ensuring output directory exists: {output_dir}")
+        os.makedirs(output_dir, exist_ok=True)
+
         # Automatically find the required CINE images using glob
         # This is robust to different subject ID conventions in filenames.
         try:
@@ -225,4 +229,4 @@ class CardioForm:
             output_prefix=output_prefix
         )
 
-        logger.info(f"\n===== Full Pipeline for {subject_id} Complete! =====")
+        logger.info(f"\n===== Full Pipeline for {output_prefix} Complete! =====")
