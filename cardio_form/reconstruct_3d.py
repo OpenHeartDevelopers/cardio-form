@@ -12,7 +12,7 @@ from torch.autograd import Variable
 import cardio_form.geometry as geometry
 from cardio_form.utils import configure_logging
 logger = configure_logging('Reconstruct3D')
-from cardio_form.output_managers import ReconstructOutputManager
+from cardio_form.output_managers import OutputManager
 
 # network
 class ReconstructUNet3D(nn.Module):
@@ -129,7 +129,7 @@ def load_model(model_file: str, device_str: str = 'cpu') -> nn.Module:
     return unet
 
 def run_3d_reconstruction(model, sax_file, ch2_file, ch4_file, output_dir, 
-                         subject_id, device_str='cpu', compute_bp=True):
+                         output_prefix, device_str='cpu', compute_bp=True):
     """
     Run 3D reconstruction from SAX, 2CH, and 4CH NIfTI files.
     
@@ -152,8 +152,8 @@ def run_3d_reconstruction(model, sax_file, ch2_file, ch4_file, output_dir,
         Path to 4-chamber long-axis NIfTI file
     output_dir : str
         Directory for output files
-    subject_id : str
-        Subject identifier for output filenames
+    output_prefix : str
+        Prefix for all output filenames (e.g., 'subject_001')
     device_str : str, optional
         'cpu' or 'cuda' (default: 'cpu')
     compute_bp : bool, optional
@@ -175,7 +175,7 @@ def run_3d_reconstruction(model, sax_file, ch2_file, ch4_file, output_dir,
     if device_str not in ['cpu', 'cuda']:
         raise ValueError("Device must be 'cpu' or 'cuda'")
     
-    outputs = ReconstructOutputManager(base_output_dir=output_dir, subject_id=subject_id)
+    outputs = OutputManager(base_output_dir=output_dir, output_prefix=output_prefix)
     
     # Set model to evaluation mode
     model.eval()
@@ -259,7 +259,7 @@ def run_3d_reconstruction(model, sax_file, ch2_file, ch4_file, output_dir,
     logger.info("Resampling to canonical LPS orientation...")
     
     canonical_nii = geometry.resample_to_lps(oblique_nii)
-    path_canonical = outputs.get_path('prediction').replace('.nii.gz', '_canonical.nii.gz')
+    path_canonical = outputs.get_path('prediction_canonical')
     # Save both versions
     nib.save(canonical_nii, path_canonical)
     

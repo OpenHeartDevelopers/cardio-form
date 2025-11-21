@@ -1,38 +1,49 @@
-import os 
-import nibabel as nib
+# in cardio_form/output_managers.py
 
-class ReconstructOutputManager:
+import os
+
+class OutputManager:
     """
-    A simple and robust class to manage the output paths for the pipeline.
+    Manages output paths for the pipeline with a flat, prefixed naming scheme.
+    
+    This class takes a single output directory and a prefix, and generates
+    full filenames by appending a descriptive suffix. It does not create any
+    subdirectories.
     """
-    def __init__(self, base_output_dir: str, subject_id: str):
+    def __init__(self, output_dir: str, output_prefix: str):
         """
-        Initializes the manager with a base directory and a subject ID.
+        Initializes the manager.
 
         Args:
-            base_output_dir (str): The root directory for all outputs.
-            subject_id (str): The unique identifier for the case being processed.
+            output_dir (str): The directory where all files will be saved.
+            output_prefix (str): The prefix for all generated filenames.
         """
-        self.base_dir = os.path.join(base_output_dir, subject_id)
-        self.intermediate_dir = os.path.join(self.base_dir, "intermediate")
+        self.output_dir = output_dir
+        self.prefix = output_prefix
+        os.makedirs(self.output_dir, exist_ok=True)
         
-        # --- Configuration ---
-        # This private dictionary defines our entire output structure.
-        # It maps a simple key to a tuple: (subdirectory, filename_template)
+        # This config maps a logical key to a descriptive suffix.
+        # This is the single source of truth for all output filenames.
         self._config = {
-            'prediction': (self.base_dir, '{subject_id}_whole_heart_segmentation.nii.gz'),
-            'sparse_volume': (self.intermediate_dir, '{subject_id}_sparse_volume.nii.gz'),
-            'sax_bp': (self.intermediate_dir, '{subject_id}_qc_sax_backprojected.nii.gz'),
-            'ch2_bp': (self.intermediate_dir, '{subject_id}_qc_ch2_backprojected.nii.gz'),
-            'ch4_bp': (self.intermediate_dir, '{subject_id}_qc_ch4_backprojected.nii.gz'),
+            # --- Final Reconstruction Outputs ---
+            'prediction': '_whole_heart_segmentation.nii.gz',
+            'prediction_canonical': '_whole_heart_segmentation_canonical.nii.gz',
+
+            # --- Intermediate Segmentation Outputs ---
+            'seg_sax': '_2D_seg_sax.nii.gz',
+            'seg_lax_2ch': '_2D_seg_lax_2ch.nii.gz',
+            'seg_lax_4ch': '_2D_seg_lax_4ch.nii.gz',
+
+            # --- Intermediate Reconstruction Outputs ---
+            'sparse_volume': '_intermediate_sparse_volume.nii.gz',
+            'sax_bp': '_intermediate_qc_sax_backprojected.nii.gz',
+            'ch2_bp': '_intermediate_qc_ch2_backprojected.nii.gz',
+            'ch4_bp': '_intermediate_qc_ch4_backprojected.nii.gz',
         }
 
     def get_path(self, key: str) -> str:
         """
-        Gets the full, absolute path for a given output key.
-
-        This method automatically creates the necessary subdirectory just before
-        returning the path.
+        Constructs the full, absolute path for a given output key.
 
         Args:
             key (str): The key for the desired output (e.g., 'prediction').
@@ -41,21 +52,14 @@ class ReconstructOutputManager:
             The absolute path for the output file.
         """
         if key not in self._config:
-            raise KeyError(f"Output key '{key}' not found in ReconstructOutputManager configuration.")
-
-        subdirectory, filename_template = self._config[key]
+            raise KeyError(f"Output key '{key}' not found in OutputManager configuration.")
         
-        # Format the filename with the subject_id
-        filename = filename_template.format(subject_id=os.path.basename(self.base_dir))
-        
-        # Construct the full path
-        full_path = os.path.join(self.base_dir, subdirectory, filename)
-        
-        # Just-in-time directory creation
-        os.makedirs(os.path.dirname(full_path), exist_ok=True)
-        
-        return full_path
+        suffix = self._config[key]
+        filename = self.prefix + suffix
+        return os.path.join(self.output_dir, filename)
 
     def get_all_paths(self) -> dict:
-        """Returns a dictionary of all configured paths."""
+        """Returns a dictionary of all configured paths for a given set of keys."""
+        # Note: This method is less useful now, as each function will only request the keys it needs.
+        # It's kept for potential future use.
         return {key: self.get_path(key) for key in self._config}

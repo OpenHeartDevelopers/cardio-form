@@ -11,7 +11,9 @@ logger = configure_logging('Segment2D')
 
 def run_segmentation(
     input_path: str,
-    output_path: str,
+    output_dir: str, 
+    output_prefix: str,
+    view_type: str,
     model_path: str,  # <-- CHANGE #1: We now accept the full file path
     device: str = 'cuda'
 ):
@@ -20,7 +22,9 @@ def run_segmentation(
 
     Args:
         input_path (str): Absolute path to the input NIfTI file.
-        output_path (str): Absolute path where the output segmentation will be saved.
+        output_dir (str): Directory to save the output segmentation.
+        output_prefix (str): Prefix for the output filename.
+        view_type (str): The view being segmented ('sax', 'lax_2ch', 'lax_4ch'). Only used for the output name
         model_path (str): Absolute path to the trained nnU-Net checkpoint FILE
                           (e.g., '/path/to/weights/sax_segment_checkpoint_final.pth').
         device (str): Device to run inference on ('cuda' or 'cpu').
@@ -68,7 +72,12 @@ def run_segmentation(
     pred_image.SetOrigin(props['sitk_stuff']['origin'])
     pred_image.SetSpacing(props['sitk_stuff']['spacing'])
 
-    sitk.WriteImage(pred_image, output_path, useCompression=True)
+    # --- Construct the output path ---
+    # The filename is now created consistently inside the function.
+    output_filename = f"{output_prefix}_2D_seg_{view_type}.nii.gz"
+    final_output_path = os.path.join(output_dir, output_filename)
+
+    sitk.WriteImage(pred_image, final_output_path, useCompression=True)
     
-    logger.info(f"  Segmentation complete. Output saved to: {output_path}")
-    return output_path
+    logger.info(f"  Segmentation complete. Output saved to: {final_output_path}")
+    return final_output_path # Return the path that was actually created

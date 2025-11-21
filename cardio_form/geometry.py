@@ -276,16 +276,42 @@ def load_sax_contour_geometry(sax_file):
     return sax_slice_contour_points, sax_slice_labels, sax_affine_tx
 
 def rand_tri(ch2_ps):
-    i0 = random.choice(list(range(len(ch2_ps[0][0]))))
-    x0 = np.transpose(ch2_ps[0])[i0]
-    d0 = np.linalg.norm(np.transpose(ch2_ps[0]) - x0, axis=1)
+    """
+    Compute normal vector from a triangle formed by three points.
+    
+    By default, uses deterministic behavior (starts from first point).
+    To enable original random behavior, set environment variable:
+    
+    Usage (to enable random):
+        export USE_RANDOM_TRI=True  # bash/zsh
+        set USE_RANDOM_TRI=True     # Windows
+    
+    Args:
+        ch2_ps: Point cloud data
+        
+    Returns:
+        Normalized normal vector
+    """
+    # Read from environment, default to False (deterministic)
+    # Only uses random if explicitly set to True
+    use_random = os.getenv('USE_RANDOM_TRI', 'False').lower() == 'true'
+    
+    if use_random:
+        i0 = random.choice(list(range(len(ch2_ps[0][0]))))
+    else:
+        i0 = 0
+    
+    points = np.transpose(ch2_ps[0])
+    
+    x0 = points[i0]
+    d0 = np.linalg.norm(points - x0, axis=1)
 
     i1 = np.argmax(d0)
-    x1 = np.transpose(ch2_ps[0])[i1]
-    d1 = np.linalg.norm(np.transpose(ch2_ps[0]) - x1, axis=1)
+    x1 = points[i1]
+    d1 = np.linalg.norm(points - x1, axis=1)
 
     i2 = np.argmax(d0 + d1)
-    x2 = np.transpose(ch2_ps[0])[i2]
+    x2 = points[i2]
 
     n = np.cross(x2 - x0, x1 - x0) / np.linalg.norm(np.cross(x2 - x0, x1 - x0))
     return n

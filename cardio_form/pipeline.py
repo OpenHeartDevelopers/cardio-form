@@ -100,16 +100,11 @@ class CardioForm:
         ch2_file_path: str, 
         ch4_file_path: str, 
         output_dir: str, 
-        subject_id: str = None
+        output_prefix: str = None
     ) -> dict:
         """Runs ONLY the 3D reconstruction step of the pipeline."""
-        if not subject_id:
-            subject_id = os.path.basename(sax_path).split('.')[0]
-            subject_id = f'WH_{subject_id}'
-            subject_id = subject_id.replace('SAX_', '')
-            logger.info(f"Subject ID not provided. Inferred as: '{subject_id}'")
-
-        logger.info(f"--- Starting 3D Reconstruction for {subject_id} ---")
+        
+        logger.info(f"--- Starting 3D Reconstruction for {output_prefix} ---")
 
         # The first time this method is called, self.recon_model will trigger
         # the loading logic. The second time, it will be instant.
@@ -118,15 +113,15 @@ class CardioForm:
             ch2_file=ch2_file_path,
             ch4_file=ch4_file_path,
             output_dir=output_dir,
-            subject_id=subject_id,
+            output_prefix=output_prefix,
             model=self.recon_model, # Accessing the property, not the _variable
             device_str=self.device
         )
         
-        logger.info(f"Reconstruction for {subject_id} complete.")
+        logger.info(f"Reconstruction for {output_prefix} complete.")
         return reconstruction_outputs
 
-    def segment(self, input_path: str, output_dir: str, view_type: str, subject_id: str = None) -> str:
+    def segment(self, input_path: str, output_dir: str, view_type: str, output_prefix: str) -> str:
         """
         Runs 2D segmentation for a specific view (SAX, LAX 2CH, or LAX 4CH).
 
@@ -134,7 +129,7 @@ class CardioForm:
             input_path (str): Path to the input NIfTI file.
             output_dir (str): Root directory to save the output segmentation.
             view_type (str): The type of view. Must be one of ['sax', 'lax_2ch', 'lax_4ch'].
-            subject_id (str, optional): Name for the case. Inferred if not provided.
+            output_prefix (str, optional): Name for the case. Inferred if not provided.
 
         Returns:
             The absolute path to the generated segmentation file.
@@ -142,10 +137,7 @@ class CardioForm:
         if view_type not in CHOICES_VIEW_TYPE:
             raise ValueError(f"Invalid view_type: '{view_type}'. Must be one of [{'|'.join(CHOICES_VIEW_TYPE)}].")
         
-        if not subject_id:
-            subject_id = os.path.basename(input_path).split('.')[0]
-
-        logger.info(f"--- Starting {view_type.upper()} Segmentation for {subject_id} ---")
+        logger.info(f"--- Starting {view_type.upper()} Segmentation for {output_prefix} ---")
 
         # 1. Select the correct model directory using our properties
         model_path_map = {
@@ -155,22 +147,17 @@ class CardioForm:
         }
         model_path = model_path_map[view_type]
 
-        # 2. Define a clean, predictable output path
-        output_filename = f"{subject_id}_seg_{view_type}.nii.gz"
-        subject_output_dir = os.path.join(output_dir, subject_id)
-        os.makedirs(subject_output_dir, exist_ok=True)
-        output_path = os.path.join(subject_output_dir, output_filename)
-
-        # 3. Call the engine to do the work
-        segment_2d.run_segmentation(
+        output_path = segment_2d.run_segmentation(
             input_path=input_path,
-            output_path=output_path,
+            output_dir=output_dir,
+            output_prefix=output_prefix,
+            view_type=view_type,
             model_path=model_path, # Pass the full file path
             device=self.device
         )
         return output_path
 
-    def run_full_pipeline(self, input_dir: str, output_dir: str, subject_id: str = None):
+    def run_full_pipeline(self, input_dir: str, output_dir: str, output_prefix: str = None):
         """
         Runs the full end-to-end pipeline for a single subject.
 
@@ -181,23 +168,12 @@ class CardioForm:
         Args:
             input_dir (str): Path to the directory containing the subject's data.
             output_dir (str): The root directory for all pipeline outputs.
-            subject_id (str, optional): A unique ID for the subject. If None,
+            output_prefix (str, optional): A unique ID for the subject. If None,
                                         it is inferred from the input directory name.
         """
-        if not subject_id:
-            subject_id = os.path.basename(os.path.normpath(input_dir))
-            logger.info(f"Subject ID not provided. Inferred as: '{subject_id}'")
 
-        logger.info(f"\n===== Starting Full Pipeline for Subject: {subject_id} =====")
-
-        # --- 1. Define Paths and Find Input Files ---
-        # Best practice: Create a dedicated folder for all intermediate files.
-        subject_output_dir = os.path.join(output_dir, subject_id)
-        intermediate_dir = os.path.join(subject_output_dir, "intermediate")
-        os.makedirs(intermediate_dir, exist_ok=True)
-        
-        logger.info(f"  - Outputs will be saved in: {subject_output_dir}")
-        logger.info(f"  - Intermediate files in: {intermediate_dir}")
+        logger.info(f"\n===== Starting Full Pipeline for prefix: {output_prefix} =====")
+        logger.info(f"  - All outputs will be saved in: {output_dir}")
 
         # Automatically find the required CINE images using glob
         # This is robust to different subject ID conventions in filenames.
@@ -217,25 +193,25 @@ class CardioForm:
         # Run SAX Segmentation
         sax_seg_path = self.segment(
             input_path=sax_image_path,
-            output_dir=intermediate_dir, # Save to the intermediate folder
-            view_type='sax',
-            subject_id=subject_id 
+            output_dir=output_dir, # Save to the intermediate folder
+            output_prefix=output_prefix,
+            view_type='sax' 
         )
 
         # Run LAX 2CH Segmentation
         lax2ch_seg_path = self.segment(
             input_path=lax2ch_image_path,
-            output_dir=intermediate_dir,
-            view_type='lax_2ch',
-            subject_id=subject_id
+            output_dir=output_dir,
+            output_prefix=output_prefix,
+            view_type='lax_2ch'
         )
 
         # Run LAX 4CH Segmentation
         lax4ch_seg_path = self.segment(
             input_path=lax4ch_image_path,
-            output_dir=intermediate_dir,
-            view_type='lax_4ch',
-            subject_id=subject_id
+            output_dir=output_dir,
+            output_prefix=output_prefix,
+            view_type='lax_4ch'
         )
 
         # --- 3. Run 3D Reconstruction ---
@@ -245,8 +221,8 @@ class CardioForm:
             sax_path=sax_seg_path,
             ch2_file_path=lax2ch_seg_path,
             ch4_file_path=lax4ch_seg_path,
-            output_dir=subject_output_dir, # The main output goes in the top-level subject folder
-            subject_id=subject_id
+            output_dir=output_dir, # The main output goes in the top-level subject folder
+            output_prefix=output_prefix
         )
 
         logger.info(f"\n===== Full Pipeline for {subject_id} Complete! =====")
