@@ -1,5 +1,4 @@
 import os
-import random
 
 import numpy as np
 import nibabel as nib
@@ -117,6 +116,7 @@ def load_model(model_file: str, device_str: str = 'cpu') -> nn.Module:
     logger.info(f'Loading model on device: {device_str}')
     device = torch.device(device_str) 
     is_cpu = device.type == 'cpu'
+    
     unet = ReconstructUNet3D(in_channel=1, out_channel=9)
     checkpoint = torch.load(model_file, map_location=device)
     unet.load_state_dict(checkpoint['model_state_dict'])

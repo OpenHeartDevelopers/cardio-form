@@ -1,0 +1,48 @@
+# ===========================================================================
+# CardioForm Label Definitions
+# ===========================================================================
+# This file is the single source of truth for all segmentation labels.
+# It maps human-readable names to their corresponding integer values.
+# It also allows grouping labels for convenience.
+# ===========================================================================
+
+# --- Individual Label Definitions ---
+# Each key is the "short name" we will use in scripts.
+labels:
+  LV_myo: 1   # Left Ventricle Myocardium
+  LV_bp: 2    # Left Ventricle Blood Pool
+  RV_bp: 3    # Right Ventricle Blood Pool
+  MYO_septum: 4 # Label 4 is problematic and often merged or deleted. We'll give it a name.
+  LA_bp: 5    # Left Atrium Blood Pool
+  RA_bp: 6    # Right Atrium Blood Pool
+  Ao: 7       # Aorta
+  PA: 8       # Pulmonary Artery
+
+# --- Group Definitions ---
+# These are convenient collections of labels for common tasks.
+groups:
+  # The structures you are most interested in
+  ventricles:
+    - LV_myo
+    - LV_bp
+    - RV_bp
+  
+  # All blood pools
+  blood_pools:
+    - LV_bp
+    - RV_bp
+    - LA_bp
+    - RA_bp
+    - Ao
+    - PA
+    
+  # All labels that are generally considered "correct" and not problematic
+  standard_anatomy:
+    - LV_myo
+    - LV_bp
+    - RV_bp
+    # Note: MYO_septum (label 4) is intentionally left out of this group
+    - LA_bp
+    - RA_bp
+    - Ao
+    - PA

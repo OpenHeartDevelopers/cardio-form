@@ -39,6 +39,12 @@ class OutputManager:
             'sax_bp': '_intermediate_qc_sax_backprojected.nii.gz',
             'ch2_bp': '_intermediate_qc_ch2_backprojected.nii.gz',
             'ch4_bp': '_intermediate_qc_ch4_backprojected.nii.gz',
+
+            # -- LA Reconstruction 3D specific outputs ---
+            'la_prediction': '_la_3d_segmentation.nii.gz',
+            'la_sparse_volume': '_la_3d_sparse_volume.nii.gz',
+            'la_ch2_bp': '_intermediate_la_3d_qc_ch2_backprojected.nii.gz',
+            'la_ch4_bp': '_intermediate_la_3d_qc_ch4_backprojected.nii.gz',
         }
 
     def get_path(self, key: str) -> str:

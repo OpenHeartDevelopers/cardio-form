@@ -1,0 +1,42 @@
+# To create this environment: conda env create -f environment.yaml
+# To activate: conda activate cardioform
+name: cardioform-cpu
+channels:
+  # The order of channels is important. Conda-forge is a great source
+  # for many scientific packages.
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  # === Core Python and CUDA Stack (from Conda) ===
+  # We specify the major versions and let conda's solver find the
+  # best compatible builds.
+  - python=3.9
+  - pytorch=2.5.1
+  - torchvision=0.20.1
+  - torchaudio=2.5.1
+  #- mkl                 # Ensure Intel MKL is included
+  - pip                 # Explicitly include pip as requested by the warning
+
+  # === Other Conda-managed packages ===
+  # These are often more stable when installed from conda-forge.
+  #- pandas
+  #- scikit-learn
+  #- scikit-image
+  #- seaborn
+  #- nibabel
+  #- pydicom
+  #- pyyaml
+  #- tqdm
+  #- yacs
+  - simpleitk
+
+  # === Pip-managed packages ===
+  # These are pure-python or have dependencies that pip handles well.
+  - pip:
+    - nnunetv2
+    - blosc2
+    - numpy==1.24.4
+    - natsort
+    - batchgenerators

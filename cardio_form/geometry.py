@@ -607,3 +607,81 @@ def resample_to_lps(nifti_image: nib.Nifti1Image) -> nib.Nifti1Image:
         resampled_data.astype(nifti_image.get_data_dtype()), 
         new_affine
     )
+
+def filter_labels(input_path: str, output_path: str, labels_to_keep: list):
+    """
+    Filters a NIfTI segmentation file to keep only a specific set of labels.
+
+    This function loads a label map, creates a new volume containing only the
+    voxels corresponding to the desired labels, and saves it as a new NIfTI
+    file, preserving the original geometry (affine and header).
+
+    Args:
+        input_path (str): Path to the input segmentation NIfTI file.
+        output_path (str): Path where the filtered NIfTI file will be saved.
+        labels_to_keep (list): A list of integers representing the label values
+                               to keep in the output image.
+    """
+    logger.info(f"Filtering {input_path} to keep labels: {labels_to_keep}")
+    
+    # 1. Load the input NIfTI image
+    nii = nib.load(input_path)
+    data = nii.get_fdata()
+    
+    # 2. Create a new, empty array with the same properties as the input
+    filtered_data = np.zeros_like(data, dtype=data.dtype)
+    
+    # 3. Iterate through the desired labels and copy them to the new array
+    for label in labels_to_keep:
+        # Create a boolean mask where the data equals the current label
+        mask = (data == label)
+        # Use the mask to copy only these voxels to our new array
+        filtered_data[mask] = label
+        
+    # 4. Create a new NIfTI image, preserving the original affine and header
+    new_nii = nib.Nifti1Image(filtered_data, nii.affine, nii.header)
+    
+    # 5. Save the new filtered image
+    nib.save(new_nii, output_path)
+    logger.info(f"Filtered segmentation saved to: {output_path}")
+
+def merge_labels(input_path: str, output_path: str, labels_to_merge: list, value_after_merge:int):
+    """
+    Merges a NIfTI segmentation file to keep only a specific set of labels.
+
+    This function loads a label map, creates a new volume containing only the
+    voxels corresponding to the desired labels, and saves it as a new NIfTI
+    file, preserving the original geometry (affine and header).
+
+    Args:
+        input_path (str): Path to the input segmentation NIfTI file.
+        output_path (str): Path where the Mergeed NIfTI file will be saved.
+        labels_to_merge (list): A list of integers representing the label values
+                               to keep in the output image.
+        value_after_merge (int): The label value to assign to the merged labels 
+                                (default is the first entry in labels_to_merge).
+    """
+    logger.info(f"Merging {input_path} to keep labels: {labels_to_merge}")
+    
+    # 1. Load the input NIfTI image
+    nii = nib.load(input_path)
+    data = nii.get_fdata()
+    
+    # 2. Create a copy array with the same properties as the input
+    merged_data = data.copy()
+    if value_after_merge is None:
+        value_after_merge = labels_to_merge[0]
+    
+    # 3. Iterate through the desired labels and copy them to the new array
+    for label in labels_to_merge:
+        # Create a boolean mask where the data equals the current label
+        mask = (data == label) 
+        # Use the mask to copy only these voxels to our new array
+        merged_data[mask] = value_after_merge
+        
+    # 4. Create a new NIfTI image, preserving the original affine and header
+    new_nii = nib.Nifti1Image(merged_data, nii.affine, nii.header)
+    
+    # 5. Save the new Mergeed image
+    nib.save(new_nii, output_path)
+    logger.info(f"Mergeed segmentation saved to: {output_path}")

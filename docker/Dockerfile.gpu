@@ -1,0 +1,46 @@
+# Use an official NVIDIA image with CUDA and Conda pre-installed
+# This ensures GPU support is available inside the container
+FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
+
+# Set up environment variables to prevent interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+ENV SHELL=/bin/bash
+
+# Install basic utilities and Miniconda
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && \
+    /bin/bash ~/miniconda.sh -b -p /opt/conda && \
+    rm ~/miniconda.sh && \
+    /opt/conda/bin/conda clean -tipsy && \
+    ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh
+
+# Set the working directory
+WORKDIR /app
+
+# Copy the environment file first to leverage Docker layer caching
+# This layer only rebuilds if environment.yaml changes
+COPY environment.yaml .
+
+# Create the Conda environment
+# We use a shell script to properly activate conda within the RUN command
+RUN . /opt/conda/etc/profile.d/conda.sh && \
+    conda activate && \
+    conda env create -f environment.yaml && \
+    conda clean -afy
+
+# Copy the rest of the application code
+COPY . .
+
+# Install the cardio-form package itself
+RUN . /opt/conda/etc/profile.d/conda.sh && \
+    conda activate cardioform && \
+    pip install -e .
+
+# Define the entrypoint for the container
+# This makes the container act like an executable
+ENTRYPOINT ["/opt/conda/envs/cardioform/bin/python", "scripts/docker_entrypoint.py"]
+CMD ["--help"]

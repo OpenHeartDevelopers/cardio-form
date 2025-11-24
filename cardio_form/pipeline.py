@@ -9,6 +9,7 @@ logger = configure_logging('CardioFormPipeline')
 
 # Each of these modules contains complex, low-level logic.
 import cardio_form.reconstruct_3d as reconstruct_3d
+import cardio_form.reconstruct_la_3d as reconstruct_la
 import cardio_form.segment_2d as segment_2d  
 
 from cardio_form.models  import default_model_manager
@@ -43,7 +44,6 @@ class CardioForm:
         self._la_recon_model = None # 3D LA 3D segmentation 
         self._lax_2ch_seg_model = None # For the future
         self._lax_4ch_seg_model = None # For the future
-        # etc.
 
     @property
     def recon_model(self):
@@ -62,11 +62,10 @@ class CardioForm:
     @property 
     def la_recon_model(self) : 
         if self._la_recon_model is None: 
-            logger.info("Loading Model for the first time... ") 
-            # model_path = default_model_manager.get_model_path('ID')
-            # self._la_recon_model = segment_2d.load_model(model_path, self.device)
-            pass 
-        self._la_recon_model
+            logger.info("Loading LA reconstruction model for the first time... ") 
+            model_path = default_model_manager.get_model_path('la_reconstruction_3d')
+            self._la_recon_model = reconstruct_la.load_la_model(model_path, self.device)
+        return self._la_recon_model
 
     @property
     def sax_model_path(self) -> str: # <-- RENAMED
@@ -156,6 +155,25 @@ class CardioForm:
             device=self.device
         )
         return output_path
+    
+    def reconstruct_la_3d(self, ch2_file: str, ch4_file: str, output_dir: str, output_prefix: str) -> dict : 
+        """ 
+        Runs ONLY the LA 3D reconstruction step of the pipeline. 
+        """ 
+        logger.info(f"--- Starting LA 3D Reconstruction for {output_prefix} ---") 
+
+        la_reconstruction_outputs = reconstruct_la.run_la_reconstruction(
+            model=self.la_recon_model,
+            ch2_file=ch2_file,
+            ch4_file=ch4_file, 
+            output_dir=output_dir,
+            output_prefix=output_prefix,
+            device_str=self.device,
+            compute_bp=True
+        ) 
+
+        logger.info(f"LA 3D Reconstruction for {output_prefix} complete.") 
+        return la_reconstruction_outputs
 
     def run_full_pipeline(self, input_dir: str, output_dir: str, output_prefix: str = None):
         """
