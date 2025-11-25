@@ -57,7 +57,7 @@ if __name__ == "__main__":
     
     parser.add_argument("--input-dir", required=True,  help="Path to the input directory containing the raw CINE MRI images.")
     parser.add_argument("--output-dir", required=True,  help="Path to the root directory where all outputs will be saved.")
-    parser.add_argument("-p", "--output-prefix", required=False, help="Prefix for all output filenames (inferred if not provided).")
+    parser.add_argument("-p", "--output-prefix", required=True, help="Prefix for all output filenames (inferred if not provided).")
     parser.add_argument("--device", default="cpu", choices=['auto', 'cpu', 'cuda'], help="Device to run the models on.")
     
     args = parser.parse_args()
