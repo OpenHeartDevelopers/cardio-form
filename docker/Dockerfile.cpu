@@ -25,19 +25,16 @@ WORKDIR /app
 # We will use a separate, CPU-only environment file.
 COPY environment-cpu.yaml .
 
-# Configure conda to use conda-forge and create the environment
+# Accept Anaconda TOS and create the Conda environment
 RUN . /opt/conda/etc/profile.d/conda.sh && \
-    conda config --add channels conda-forge && \
-    conda config --set channel_priority strict && \
+    conda config --set allow_conda_downgrades true && \
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
     conda env create -f environment-cpu.yaml && \
     conda clean -afy
 
 # Copy the rest of the application code
 # COPY . .
-
-# Install the cardio-form package itself
-RUN . /opt/conda/etc/profile.d/conda.sh && \
-    conda run -n cardioform-cpu pip install -e .
 
 COPY cardio_form/ ./cardio_form
 COPY scripts/ ./scripts
