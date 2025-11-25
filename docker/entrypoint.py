@@ -88,7 +88,7 @@ if __name__ == "__main__":
     subparsers = parser.add_subparsers(dest='mode', required=True)
     
     # --- Parser for the reconstruction mode ---
-    reconstruct_parser = subparsers.add_parser('reconstruct', parents=[ml_parent_parser], help='Run 3D reconstruction from 2D segmentations.')
+    reconstruct_parser = subparsers.add_parser('reconstruct', parents=[ml_parent_parser], aliases=['reconstrunct_3d', '3d'], help='Run 3D reconstruction from 2D segmentations.')
     reconstruct_parser.add_argument("-sax", "--sax-file", required=True, help="Path to SAX NIfTI.")
     reconstruct_parser.add_argument("-ch2", "--ch2-file", required=True, help="Path to 2CH NIfTI.")
     reconstruct_parser.add_argument("-ch4", "--ch4-file", required=True, help="Path to 4CH NIfTI.")
@@ -99,11 +99,11 @@ if __name__ == "__main__":
     segment_parser.add_argument("--view-type", required=True, choices=CHOICES_VIEW_TYPE, help="The type of cardiac view to segment.")
 
     # --- Parser for full_pipeline mode ---
-    full_pipeline_parser = subparsers.add_parser('full_pipeline', parents=[ml_parent_parser], help='Run the full CardioForm pipeline: 2D Segmentation -> 3D Reconstruction.')
+    full_pipeline_parser = subparsers.add_parser('full_pipeline', parents=[ml_parent_parser], aliases=['full'], help='Run the full CardioForm pipeline: 2D Segmentation -> 3D Reconstruction.')
     full_pipeline_parser.add_argument("--input-dir", required=True,  help="Path to the input directory containing the raw CINE MRI images.")
 
     # --- Parser for LA reconstruction mode ---
-    la_reconstruct_parser = subparsers.add_parser('reconstruct_la', help='Run LA 3D reconstruction from 2D segmentations.')
+    la_reconstruct_parser = subparsers.add_parser('reconstruct_la', aliases=['la_3d'], help='Run LA 3D reconstruction from 2D segmentations.')
     la_reconstruct_parser.add_argument("-ch2", "--ch2-file", required=True, help="Path to the LAX 2-chamber segmentation NIfTI file.")
     la_reconstruct_parser.add_argument("-ch4", "--ch4-file", required=True, help="Path to the LAX 4-chamber segmentation NIfTI file.")
 
