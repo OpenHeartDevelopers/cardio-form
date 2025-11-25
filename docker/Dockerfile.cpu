@@ -25,8 +25,10 @@ WORKDIR /app
 # We will use a separate, CPU-only environment file.
 COPY environment-cpu.yaml .
 
-# Create the Conda environment from the CPU-specific file
+# Configure conda to use conda-forge and create the environment
 RUN . /opt/conda/etc/profile.d/conda.sh && \
+    conda config --add channels conda-forge && \
+    conda config --set channel_priority strict && \
     conda env create -f environment-cpu.yaml && \
     conda clean -afy
 
