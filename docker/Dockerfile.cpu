@@ -6,10 +6,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV SHELL=/bin/bash
 
 # Install basic utilities and Miniconda
-# (This section is the same as the GPU Dockerfile)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     git \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && \
