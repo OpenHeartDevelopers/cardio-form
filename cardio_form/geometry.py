@@ -411,6 +411,9 @@ def vol_grid_gen(ch2_ps, ch4_ps, sax_ps,
     pq_2ch = np.transpose([np.dot(xyz_2ch - np.transpose(ch2_ipp), v0_s) / ch2_pxs[0],
                            np.dot(xyz_2ch - np.transpose(ch2_ipp), v1_s) / ch2_pxs[1]]).squeeze().round()
     px2vx_2ch = [0, 1, 2, 5]
+
+    out_of_bounds_counter = 0
+    total_voxels = len(i_2ch)
     for ki in range(len(i_2ch)):
         try:
             vol_sp[ijk_v_[i_2ch[ki]][0].astype(int),
@@ -419,7 +422,12 @@ def vol_grid_gen(ch2_ps, ch4_ps, sax_ps,
                                                                          pq_2ch[ki][1].astype(int),
                                                                          0].astype(int)]
         except:
-            logger.info('Out of box voxels.')
+            out_of_bounds_counter += 1
+    if out_of_bounds_counter > 0:    
+        logger.warning(
+            f"Notice: {out_of_bounds_counter} out of {total_voxels} voxels "
+            f"were projected out of the target volume's bounds. This is usually acceptable."
+        )
     # 4ch
     d4 = np.dot(xyz_v - ch4_pc[0][:, 0], n_4ch)
     i_4ch = np.where(np.abs(d4) <= vs)[0]
@@ -429,6 +437,9 @@ def vol_grid_gen(ch2_ps, ch4_ps, sax_ps,
     pq_4ch = np.transpose([np.dot(xyz_4ch - np.transpose(ch4_ipp), v0_s) / ch4_pxs[0],
                            np.dot(xyz_4ch - np.transpose(ch4_ipp), v1_s) / ch4_pxs[1]]).squeeze().round()
     px2vx_4ch = [0, 1, 2, 3, 5, 6]
+
+    out_of_bounds_counter = 0
+    total_voxels = len(i_4ch)
     for ki in range(len(i_4ch)):
         try:
             vol_sp[ijk_v_[i_4ch[ki]][0].astype(int),
@@ -437,7 +448,12 @@ def vol_grid_gen(ch2_ps, ch4_ps, sax_ps,
                                                                          pq_4ch[ki][1].astype(int),
                                                                          0].astype(int)]
         except:
-            logger.info('Out of box voxels.')
+            out_of_bounds_counter += 1
+    if out_of_bounds_counter > 0:    
+        logger.warning(
+            f"Notice: {out_of_bounds_counter} out of {total_voxels} voxels "
+            f"were projected out of the target volume's bounds. This is usually acceptable."
+        )
     # sax
     ns = len(sax_pc)
     for ks in range(ns):
@@ -451,6 +467,9 @@ def vol_grid_gen(ch2_ps, ch4_ps, sax_ps,
         pq_sax = np.transpose([np.dot(xyz_ks - np.transpose(sax_ipp[ks]), v0_s) / sax_pxs[0],
                                np.dot(xyz_ks - np.transpose(sax_ipp[ks]), v1_s) / sax_pxs[1]]).squeeze().round()
         px2vx_sax = [0, 1, 2, 3]
+
+        out_of_bounds_counter = 0
+        total_voxels = len(i_ks)
         for ki in range(len(i_ks)):
             try:
                 if sax_lab[pq_sax[ki][0].astype(int), pq_sax[ki][1].astype(int), ks] > 0:
@@ -460,7 +479,12 @@ def vol_grid_gen(ch2_ps, ch4_ps, sax_ps,
                                                                                 pq_sax[ki][1].astype(int),
                                                                                 ks].astype(int)]
             except:
-                logger.info('Out of box voxels.')
+                out_of_bounds_counter += 1
+        if out_of_bounds_counter > 0:    
+            logger.warning(
+                f"Notice: {out_of_bounds_counter} out of {total_voxels} voxels "
+                f"were projected out of the target volume's bounds. This is usually acceptable."
+            )
     return vol_sp, affine_3d
 
 def vol_grid_bp(ch2_ps, ch4_ps, sax_ps,
@@ -502,6 +526,9 @@ def vol_grid_bp(ch2_ps, ch4_ps, sax_ps,
                            np.dot(xyz_4ch - np.transpose(ch4_ipp), v1_s) / ch4_pxs[1]]).squeeze().round()
     ch4_bp = np.zeros(np.shape(ch2_lab))
     px2vx_4ch = [0, 1, 2, 3, 0, 4, 5, 0, 0]
+
+    out_of_bounds_counter = 0
+    total_voxels = len(i_4ch)
     for ki in range(len(i_4ch)):
         try:
             ch4_bp[pq_4ch[ki][0].astype(int),
@@ -510,7 +537,13 @@ def vol_grid_bp(ch2_ps, ch4_ps, sax_ps,
                                          ijk_v_[i_4ch[ki]][1].astype(int),
                                          ijk_v_[i_4ch[ki]][2].astype(int)].astype(int)]
         except:
-            logger.info('Out of box voxels.')
+            out_of_bounds_counter += 1
+    if out_of_bounds_counter > 0:    
+        logger.warning(
+            f"Notice: {out_of_bounds_counter} out of {total_voxels} voxels "
+            f"were projected out of the target volume's bounds. This is usually acceptable."
+        )
+
     # sax
     ns = len(sax_pc)
     sax_bp = np.zeros(np.shape(sax_lab))
@@ -525,6 +558,9 @@ def vol_grid_bp(ch2_ps, ch4_ps, sax_ps,
         pq_sax = np.transpose([np.dot(xyz_ks - np.transpose(sax_ipp[ks]), v0_s) / sax_pxs[0],
                                np.dot(xyz_ks - np.transpose(sax_ipp[ks]), v1_s) / sax_pxs[1]]).squeeze().round()
         px2vx_sax = [0, 1, 2, 3, 0, 0, 0, 0, 0]
+
+        out_of_bounds_counter = 0
+        total_voxels = len(i_ks)
         for ki in range(len(i_ks)):
             try:
                 sax_bp[pq_sax[ki][0].astype(int),
@@ -533,7 +569,13 @@ def vol_grid_bp(ch2_ps, ch4_ps, sax_ps,
                                               ijk_v_[i_ks[ki]][1].astype(int),
                                               ijk_v_[i_ks[ki]][2].astype(int)].astype(int)]
             except:
-                logger.info('Out of box voxels.')
+                out_of_bounds_counter += 1
+        if out_of_bounds_counter > 0:    
+            logger.warning(
+                f"Notice: {out_of_bounds_counter} out of {total_voxels} voxels "
+                f"were projected out of the target volume's bounds. This is usually acceptable."
+            )
+            
     return ch2_bp, ch4_bp, sax_bp
 
 ## post processing helpers 
