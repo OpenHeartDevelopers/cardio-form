@@ -9,26 +9,44 @@ from cardio_form.pipeline import CardioForm
 from cardio_form.utils import configure_logging
 logger = configure_logging('ScriptReconstructLA3D')
 
+def run_la_reconstruction_job(ch2_file, ch4_file, output_dir, output_prefix, device='cpu'):
+    """
+    Pure Python function to run the LA 3D reconstruction. 
+    Accepts standard types, not argparse objects.
+    """
+    logger.info("--- Initializing CardioForm Pipeline ---")
+    
+    try:
+        pipeline = CardioForm(device=device)
+        
+        # Call the high-level method from our pipeline class.
+        pipeline.reconstruct_la_3d(
+            ch2_file=ch2_file,
+            ch4_file=ch4_file,
+            output_dir=output_dir,
+            output_prefix=output_prefix
+        )
+        logger.info("\n--- LA 3D Reconstruction job finished successfully! ---")
+        return True
+        
+    except Exception as e:
+        logger.error(f"FATAL: Failed to run LA 3D reconstruction. Error: {e}")
+        raise e
+
 def main(args):
     """
-    Command-line interface for running the LA 3D reconstruction step of the CardioForm pipeline.
+    CLI Wrapper. Only handles Argument Parsing.
     """
-
-    logger.info("--- Initializing CardioForm Pipeline ---")
     try:
-        pipeline = CardioForm(device=args.device)
-    except Exception as e:
-        logger.info(f"FATAL: Failed to initialize CardioForm pipeline. Error: {e}")
-        return
-    
-    # --- Run the LA 3D Reconstruction ---
-    # Call the high-level method from our pipeline class.
-    pipeline.reconstruct_la_3d(ch2_file=args.ch2_file, 
-                            ch4_file=args.ch4_file, 
-                            output_dir=args.output_dir, 
-                            output_prefix=args.output_prefix) 
-    
-    logger.info("\n--- Script finished successfully! ---")
+        run_la_reconstruction_job(
+            ch2_file=args.ch2_file,
+            ch4_file=args.ch4_file,
+            output_dir=args.output_dir,
+            output_prefix=args.output_prefix,
+            device=args.device
+        )
+    except Exception:
+        sys.exit(1)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

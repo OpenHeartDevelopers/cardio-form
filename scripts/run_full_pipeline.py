@@ -12,30 +12,42 @@ from cardio_form.pipeline import CardioForm
 from cardio_form.utils import configure_logging
 logger = configure_logging(__name__)
 
-def main(args):
-
-    # --- Initialize the Pipeline ---
+def run_full_pipeline_job(input_dir, output_dir, output_prefix, device='cpu'):
+    """
+    Pure Python function to run the full pipeline. 
+    Accepts standard types, not argparse objects.
+    """
     logger.info("--- Initializing CardioForm Pipeline ---")
-    pipeline = CardioForm(device=args.device)
-
-    # --- Determine the Output Prefix ---
-    # If the user doesn't provide a prefix, we create a sensible default
-    # from the input directory's name.
-    if args.output_prefix:
-        output_prefix = args.output_prefix
-    else:
-        output_prefix = os.path.basename(os.path.normpath(args.input_dir))
-        logger.info(f"Output prefix not provided. Inferred as: '{output_prefix}'")
-
-    # --- Run the Full Pipeline ---
-    pipeline.run_full_pipeline(
-        input_dir=args.input_dir,
-        output_dir=args.output_dir,
-        output_prefix=output_prefix # Pass the new prefix
-    )
-
     
-    logger.info("--- Full pipeline finished successfully! ---")
+    try:
+        pipeline = CardioForm(device=device)
+        
+        # Call the high-level method from our pipeline class.
+        pipeline.run_full_pipeline(
+            input_dir=input_dir,
+            output_dir=output_dir,
+            output_prefix=output_prefix
+        )
+        logger.info("\n--- Full pipeline job finished successfully! ---")
+        return True
+        
+    except Exception as e:
+        logger.error(f"FATAL: Failed to run full pipeline. Error: {e}")
+        raise e
+
+def main(args):
+    """
+    CLI Wrapper. Only handles Argument Parsing.
+    """
+    try:
+        run_full_pipeline_job(
+            input_dir=args.input_dir,
+            output_dir=args.output_dir,
+            output_prefix=args.output_prefix,
+            device=args.device
+        )
+    except Exception:
+        sys.exit(1)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

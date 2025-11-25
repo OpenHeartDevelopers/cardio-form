@@ -655,7 +655,7 @@ def merge_labels(input_path: str, output_path: str, labels_to_merge: list, value
 
     Args:
         input_path (str): Path to the input segmentation NIfTI file.
-        output_path (str): Path where the Mergeed NIfTI file will be saved.
+        output_path (str): Path where the Merged NIfTI file will be saved.
         labels_to_merge (list): A list of integers representing the label values
                                to keep in the output image.
         value_after_merge (int): The label value to assign to the merged labels 
@@ -670,6 +670,7 @@ def merge_labels(input_path: str, output_path: str, labels_to_merge: list, value
     # 2. Create a copy array with the same properties as the input
     merged_data = data.copy()
     if value_after_merge is None:
+        logger.info(f"No value_after_merge provided, using the first label in labels_to_merge ({labels_to_merge[0]}).")
         value_after_merge = labels_to_merge[0]
     
     # 3. Iterate through the desired labels and copy them to the new array
@@ -682,6 +683,6 @@ def merge_labels(input_path: str, output_path: str, labels_to_merge: list, value
     # 4. Create a new NIfTI image, preserving the original affine and header
     new_nii = nib.Nifti1Image(merged_data, nii.affine, nii.header)
     
-    # 5. Save the new Mergeed image
+    # 5. Save the new Merged image
     nib.save(new_nii, output_path)
-    logger.info(f"Mergeed segmentation saved to: {output_path}")
+    logger.info(f"Merged segmentation saved to: {output_path}")

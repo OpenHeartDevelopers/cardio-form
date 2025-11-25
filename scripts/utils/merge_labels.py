@@ -12,13 +12,12 @@ from cardio_form.labels import default_label_manager # Import the default manage
 from cardio_form.utils import configure_logging
 logger = configure_logging('ScriptMergeLabels')
 
-def main(args):
-
-    logger.info(f"User requested to keep labels: {args.labels}")
+def run_merge_labels_job(input_path, output_path, user_labels_to_keep, value_after_merge=None):
+    logger.info(f"User requested to merge labels: {user_labels_to_keep}")
     try:
         # Use the label manager to translate the user's flexible input
         # into a clean, sorted list of integer labels.
-        labels_to_merge = default_label_manager.get_values_from_names(args.labels)
+        labels_to_merge = default_label_manager.get_values_from_names(user_labels_to_keep)
         logger.info(f"Translated to integer labels: {labels_to_merge}")
 
     except KeyError as e:
@@ -31,16 +30,32 @@ def main(args):
     try:
         # Call the geometry engine function with the clean integer list
         geometry.merge_labels(
-            input_path=args.input,
-            output_path=args.output,
+            input_path=input_path,
+            output_path=output_path,
             labels_to_merge=labels_to_merge, 
-            value_after_merge=args.value_after_merge
+            value_after_merge=value_after_merge
         )
         logger.info("\n--- Mergeing complete! ---")
     except FileNotFoundError as e:
         logger.error(f"FATAL ERROR: Input file not found. {e}")
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
+
+
+def main(args):
+    """
+    CLI Wrapper. Only handles Argument Parsing.
+    """
+    try:
+        run_merge_labels_job(
+            input_path=args.input,
+            output_path=args.output,
+            user_labels_to_keep=args.labels,
+            value_after_merge=args.value_after_merge
+        )
+    except Exception:
+        sys.exit(1)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

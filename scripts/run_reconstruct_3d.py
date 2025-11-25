@@ -1,59 +1,77 @@
-# in scripts/run_reconstruction.py
+# scripts/run_reconstruct_3d.py
 
 import os
 import sys
 import argparse
 
-# This adds the project root to the Python path, allowing us to import `cardio_form`
+# Keep this for standalone usage, but in Docker, PYTHONPATH usually handles this.
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from cardio_form.pipeline import CardioForm
 from cardio_form.utils import configure_logging
+
+# Create a module-level logger
 logger = configure_logging('ScriptReconstruct3D')
+
+def run_reconstruction_job(sax_path, ch2_path, ch4_path, output_dir, output_prefix, device='cpu'):
+    """
+    Pure Python function to run the reconstruction. 
+    Accepts standard types, not argparse objects.
+    """
+    logger.info("--- Initializing CardioForm Pipeline ---")
+    
+    try:
+        pipeline = CardioForm(device=device)
+        
+        # Call the high-level method from our pipeline class.
+        pipeline.reconstruct(
+            sax_path=sax_path,
+            ch2_file_path=ch2_path,
+            ch4_file_path=ch4_path,
+            output_dir=output_dir,
+            output_prefix=output_prefix
+        )
+        logger.info("\n--- Reconstruction job finished successfully! ---")
+        return True
+        
+    except Exception as e:
+        logger.error(f"FATAL: Failed to run reconstruction. Error: {e}")
+        # In a larger pipeline, you might want to raise the error up to the caller
+        raise e
 
 def main(args):
     """
-    Command-line interface for running the 3D reconstruction step of the CardioForm pipeline.
+    CLI Wrapper. Only handles Argument Parsing.
     """
-
-    logger.info("--- Initializing CardioForm Pipeline ---")
     try:
-        pipeline = CardioForm(device=args.device)
-    except Exception as e:
-        logger.info(f"FATAL: Failed to initialize CardioForm pipeline. Error: {e}")
-        return
-    
-    # --- Run the Reconstruction ---
-    # Call the high-level method from our pipeline class.
-    pipeline.reconstruct(
-        sax_path=args.sax_file,
-        ch2_file_path=args.ch2_file,
-        ch4_file_path=args.ch4_file,
-        output_dir=args.output_dir,
-        output_prefix=args.output_prefix # Pass the new prefix
-    )
-    
-    logger.info("\n--- Script finished successfully! ---")
-
+        run_reconstruction_job(
+            sax_path=args.sax_file,
+            ch2_path=args.ch2_file,
+            ch4_path=args.ch4_file,
+            output_dir=args.output_dir,
+            output_prefix=args.output_prefix,
+            device=args.device
+        )
+    except Exception:
+        sys.exit(1)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Run 3D reconstruction from 2D cardiac MRI segmentations.",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter # Shows default values in help
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     
     # --- Input Arguments ---
-    parser.add_argument("-sax", "--sax-file", required=True, help="Path to the SAX segmentation NIfTI file.")
-    parser.add_argument("-ch2", "--ch2-file", required=True, help="Path to the LAX 2-chamber segmentation NIfTI file.")
-    parser.add_argument("-ch4", "--ch4-file", required=True, help="Path to the LAX 4-chamber segmentation NIfTI file.")
+    parser.add_argument("-sax", "--sax-file", required=True, help="Path to SAX NIfTI.")
+    parser.add_argument("-ch2", "--ch2-file", required=True, help="Path to 2CH NIfTI.")
+    parser.add_argument("-ch4", "--ch4-file", required=True, help="Path to 4CH NIfTI.")
     
     # --- Output Arguments ---
-    parser.add_argument("-o", "--output-dir", required=True, help="Directory to save all output files.")
-    parser.add_argument("-p", "--output-prefix", required=True, help="Prefix for all output filenames (e.g., 'subject_001_cine').")
+    parser.add_argument("-o", "--output-dir", required=True, help="Output directory.")
+    parser.add_argument("-p", "--output-prefix", required=True, help="Output filename prefix.")
     
     # --- Configuration Arguments ---
-    parser.add_argument("--model-version", default="default", help="Version of the reconstruction model to use (from models.yaml).")
-    parser.add_argument("--device", default="cpu", choices=['cpu', 'cuda'], help="Device to run the model on.")
+    parser.add_argument("--device", default="cpu", choices=['cpu', 'cuda'], help="Device to use.")
     
     args = parser.parse_args()
     main(args)

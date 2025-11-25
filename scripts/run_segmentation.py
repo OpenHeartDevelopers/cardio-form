@@ -9,21 +9,45 @@ from cardio_form.pipeline import CardioForm, CHOICES_VIEW_TYPE
 from cardio_form.utils import configure_logging
 logger = configure_logging('ScriptSegment2D')
 
-def main(args):
-
+def run_segmentation_job(input_path, output_dir, view_type, output_prefix, device='cpu'):  
+    """
+    Pure Python function to run the segmentation. 
+    Accepts standard types, not argparse objects.
+    """
     logger.info("--- Initializing CardioForm Pipeline ---")
-    pipeline = CardioForm(device=args.device)
-
-    # Call the high-level segment method from our pipeline class
-    pipeline.segment(
-        input_path=args.input,
-        output_dir=args.output_dir,
-        view_type=args.view_type,
-        output_prefix=args.output_prefix
-    )
-
     
-    logger.info("\n--- Script finished successfully! ---")
+    try:
+        pipeline = CardioForm(device=device)
+        
+        # Call the high-level method from our pipeline class.
+        pipeline.segment(
+            input_path=input_path,
+            output_dir=output_dir,
+            view_type=view_type,
+            output_prefix=output_prefix
+        )
+        logger.info("\n--- Segmentation job finished successfully! ---")
+        return True
+        
+    except Exception as e:
+        logger.error(f"FATAL: Failed to run segmentation. Error: {e}")
+        raise e
+
+def main(args):
+    """
+    CLI Wrapper. Only handles Argument Parsing.
+    """
+    try:
+        run_segmentation_job(
+            input_path=args.input,
+            output_dir=args.output_dir,
+            view_type=args.view_type,
+            output_prefix=args.output_prefix,
+            device=args.device
+        )
+    except Exception:
+        sys.exit(1)
+    
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
