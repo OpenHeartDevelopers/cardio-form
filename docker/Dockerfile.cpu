@@ -27,17 +27,19 @@ COPY environment-cpu.yaml .
 
 # Create the Conda environment from the CPU-specific file
 RUN . /opt/conda/etc/profile.d/conda.sh && \
-    conda activate && \
     conda env create -f environment-cpu.yaml && \
     conda clean -afy
 
 # Copy the rest of the application code
-COPY . .
+# COPY . .
 
 # Install the cardio-form package itself
 RUN . /opt/conda/etc/profile.d/conda.sh && \
-    conda activate cardioform-cpu && \
-    pip install -e .
+    conda run -n cardioform-cpu pip install -e .
+
+COPY cardio_form/ ./cardio_form
+COPY scripts/ ./scripts
+COPY models.yaml .
 
 # Define the entrypoint
 ENTRYPOINT ["/opt/conda/envs/cardioform-cpu/bin/python", "scripts/docker_entrypoint.py"]
