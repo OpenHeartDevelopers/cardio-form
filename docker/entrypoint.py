@@ -21,6 +21,7 @@ def main(args):
     It unpacks the 'args' object and calls the specific job functions.
     """
     mode = args.mode
+    logger.info(f'Attempting mode: {mode}')
     
     if mode == 'reconstruct':
         run_reconstruction_job(
@@ -39,7 +40,7 @@ def main(args):
             output_prefix=args.output_prefix,
             device=args.device
         )
-    elif mode == 'full_pipeline':
+    elif mode == 'full_pipeline' or mode == 'full':
         run_full_pipeline_job(
             input_dir=args.input_dir,
             output_dir=args.output_dir,
