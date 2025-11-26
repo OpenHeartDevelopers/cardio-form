@@ -1,9 +1,35 @@
-# CardioForm
-
+# CardioForm: 2D Segmentation & 3D Reconstruction
 A pipeline for whole-heart segmentation and 3D reconstruction from CINE MRI.
 
+## 🚀 Quick Start
+
+This project is distributed as a Docker container. The only file you need to download from this repository is the `run-docker.sh` wrapper script.
+
+1.  **Download the wrapper script:**
+    ```bash
+    curl -O https://raw.githubusercontent.com/<your_org>/cardio_form/main/run-docker.sh
+    chmod +x run-docker.sh
+    ```
+
+2.  **Pull the Docker image:**
+    ```bash
+    # For CPU execution (recommended default)
+    docker pull cemrg/cardio-form:latest
+    ```
+    *For GPU execution, see advanced usage below.*
+
+3.  **Run the pipeline:**
+    The first argument to the script is your data directory. All subsequent paths inside the command must be relative to `/data`.
+    ```bash
+    # Example: Run the full pipeline on a subject directory
+    ./run-docker.sh /path/to/your/subject01 full \
+        --input-dir /data \
+        --output-dir /data/output \
+        --output-prefix "subject01"
+    ```
 ---
 
+# For developers and to run locally 
 ## Installation
 
 This guide provides instructions for setting up the project in a clean virtual environment using either Conda or Python's built-in `venv`.
