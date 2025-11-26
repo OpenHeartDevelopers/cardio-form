@@ -1,6 +1,5 @@
 name: Docker Publish on Release
 
-# This workflow runs automatically whenever a new release is created
 on:
   release:
     types: [published]
@@ -16,6 +15,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # CORRECTIVE STEP: Add docker/metadata-action to generate tags and labels
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: cemrg/cardio-form # Docker Hub repository name
+          tags: |
+            type=semver,pattern={{version}} # e.g., v0.2.0 -> 0.2.0
+            type=semver,pattern={{major}}.{{minor}} # e.g., v0.2.0 -> 0.2
+            type=raw,value=latest,enable={{is_default_branch}}
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -28,20 +38,25 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # MODIFIED STEP: Use the generated tags for the GPU image
       - name: Build and push GPU Docker image
+        id: build-gpu
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dockerfile.gpu # Specify the GPU dockerfile
+          file: ./docker/Dockerfile.gpu # Corrected path
           push: true
-          tags: ${{ steps.meta.outputs.tags }}-gpu # Add a -gpu suffix, e.g., 0.2.0-gpu
+          tags: |
+            ${{ steps.meta.outputs.tags }}-gpu
           labels: ${{ steps.meta.outputs.labels }}
 
+      # MODIFIED STEP: Use the generated tags for the CPU image
       - name: Build and push CPU Docker image
+        id: build-cpu
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dockerfile.cpu # Specify the CPU dockerfile (latest tag by default)
+          file: ./docker/Dockerfile.cpu # Corrected path
           push: true
-          tags: ${{ steps.meta.outputs.tags }} # NO suffix for the CPU one, e.g., 0.2.0
+          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
