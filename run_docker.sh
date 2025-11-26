@@ -82,9 +82,10 @@ fi
 
 echo "--> Mounting host data directory: '$DATA_DIR' to '/data' in container."
 
+DOCKER_CACHE='/.cache/cardio_form'
 # Ensure the local cache directory exists
 mkdir -p "${CACHE_DIR}"
-echo "--> Mounting host cache directory: '${CACHE_DIR}' to '/root/.cache/cardio_form'."
+echo "--> Mounting host cache directory: '${CACHE_DIR}' to '${DOCKER_CACHE}'."
 
 echo "--> Running Docker image: ${IMAGE_NAME}"
 
@@ -94,6 +95,6 @@ docker run \
     --user "$(id -u):$(id -g)" \
     ${GPU_FLAG} \
     --volume="${DATA_DIR}:/data" \
-    --volume="${CACHE_DIR}:/root/.cache/cardio_form" \
+    --volume="${CACHE_DIR}:${DOCKER_CACHE}" \
     "${IMAGE_NAME}" \
     "$@" # Pass all REMAINING arguments to the container

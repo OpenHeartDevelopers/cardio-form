@@ -25,21 +25,27 @@ WORKDIR /app
 # This layer only rebuilds if environment.yaml changes
 COPY environment.yaml .
 
-# Create the Conda environment
-# We use a shell script to properly activate conda within the RUN command
+# Accept Anaconda TOS and create the Conda evironment
 RUN . /opt/conda/etc/profile.d/conda.sh && \
-    conda config --add channels conda-forge && \
-    conda config --set channel_priority strict && \
+    conda config --set allow_conda_downgrades true && \
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
     conda env create -f environment.yaml && \
     conda clean -afy
 
 # Copy the rest of the application code
-# COPY . .
-
 COPY cardio_form/ ./cardio_form
 COPY scripts/ ./scripts
+COPY docker/entrypoint.py ./scripts/entrypoint.py
 COPY models.yaml .
+COPY labels.yaml .
+
+# Set PYTHONPATH so Python can find the cardio_form module
+ENV PYTHONPATH=/app
+
+# Create cache directory
+RUN mkdir -p /.cache/cardio_form
 
 # Define the entrypoint
-ENTRYPOINT ["/opt/conda/envs/cardioform/bin/python", "scripts/docker_entrypoint.py"]
+ENTRYPOINT ["/opt/conda/envs/cardioform/bin/python", "scripts/entrypoint.py"]
 CMD ["--help"]

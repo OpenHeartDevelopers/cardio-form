@@ -35,11 +35,17 @@ RUN . /opt/conda/etc/profile.d/conda.sh && \
 
 # Copy the rest of the application code
 # COPY . .
-
 COPY cardio_form/ ./cardio_form
 COPY scripts/ ./scripts
+COPY docker/entrypoint.py ./scripts/
 COPY models.yaml .
+COPY labels.yaml .
+
+# Set PYTHONPATH so Python can find the cardio_form module
+ENV PYTHONPATH=/app
+
+RUN mkdir -p /.cache/cardio_form
 
 # Define the entrypoint
-ENTRYPOINT ["/opt/conda/envs/cardioform-cpu/bin/python", "scripts/docker_entrypoint.py"]
+ENTRYPOINT ["/opt/conda/envs/cardioform-cpu/bin/python", "scripts/entrypoint.py"]
 CMD ["--help"]
