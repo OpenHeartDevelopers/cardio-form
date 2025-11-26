@@ -15,6 +15,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # --- FIX 1: ADD THIS STEP TO FREE UP DISK SPACE ---
+      - name: Maximize build space
+        uses: easimon/maximize-build-space-action@v10
+        with:
+          root-reserve-mb: 512
+          swap-size-mb: 1024
+          remove-dotnet: 'true'
+          remove-android: 'true'
+          remove-haskell: 'true'
+
       # CORRECTIVE STEP: Add docker/metadata-action to generate tags and labels
       - name: Docker meta
         id: meta
