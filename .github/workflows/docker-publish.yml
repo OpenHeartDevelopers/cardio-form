@@ -15,25 +15,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # --- FIX 1: ADD THIS STEP TO FREE UP DISK SPACE ---
-      - name: Maximize build space
-        uses: easimon/maximize-build-space-action@v10
-        with:
-          root-reserve-mb: 512
-          swap-size-mb: 1024
-          remove-dotnet: 'true'
-          remove-android: 'true'
-          remove-haskell: 'true'
-
-      # CORRECTIVE STEP: Add docker/metadata-action to generate tags and labels
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: cemrg/cardio-form # Docker Hub repository name
+          images: cemrg/cardio-form
           tags: |
-            type=semver,pattern={{version}} # e.g., v0.2.0 -> 0.2.0
-            type=semver,pattern={{major}}.{{minor}} # e.g., v0.2.0 -> 0.2
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Set up QEMU
@@ -48,25 +37,28 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # MODIFIED STEP: Use the generated tags for the GPU image
-      - name: Build and push GPU Docker image
-        id: build-gpu
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./docker/Dockerfile.gpu # Corrected path
-          push: true
-          tags: |
-            ${{ steps.meta.outputs.tags }}-gpu
-          labels: ${{ steps.meta.outputs.labels }}
+      # --- CONTINGENCY: GPU BUILD STEP DISABLED ---
+      # This step is temporarily disabled to resolve build failures on the GitHub
+      # Actions runner due to excessive disk space usage by the GPU libraries.
+      # Only the CPU image will be published until this is resolved.
+      #
+      # - name: Build and push GPU Docker image
+      #   id: build-gpu
+      #   uses: docker/build-push-action@v6
+      #   with:
+      #     context: .
+      #     file: ./docker/Dockerfile.gpu
+      #     push: true
+      #     tags: |
+      #       ${{ steps.meta.outputs.tags }}-gpu
+      #     labels: ${{ steps.meta.outputs.labels }}
 
-      # MODIFIED STEP: Use the generated tags for the CPU image
       - name: Build and push CPU Docker image
         id: build-cpu
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./docker/Dockerfile.cpu # Corrected path
+          file: ./docker/Dockerfile.cpu
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
