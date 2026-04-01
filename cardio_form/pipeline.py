@@ -2,7 +2,6 @@
 
 import os
 import torch
-import glob
 
 from cardio_form.utils import configure_logging
 logger = configure_logging('CardioFormPipeline')
@@ -175,65 +174,57 @@ class CardioForm:
         logger.info(f"LA 3D Reconstruction for {output_prefix} complete.") 
         return la_reconstruction_outputs
 
-    def run_full_pipeline(self, input_dir: str, output_dir: str, output_prefix: str = None):
+    def run_full_pipeline(
+        self,
+        sax_path: str,
+        ch2_path: str,
+        ch4_path: str,
+        output_dir: str,
+        output_prefix: str,
+    ):
         """
         Runs the full end-to-end pipeline for a single subject.
 
-        This method automatically finds the required CINE images in the input
-        directory, runs 2D segmentation for each view, and then uses those
-        segmentations to run the 3D reconstruction.
+        Accepts explicit paths to the three required CINE NIfTI files.
+        File discovery (e.g. glob or YAML-driven resolution) is the caller's
+        responsibility.
 
         Args:
-            input_dir (str): Path to the directory containing the subject's data.
-            output_dir (str): The root directory for all pipeline outputs.
-            output_prefix (str, optional): A unique ID for the subject. If None,
-                                        it is inferred from the input directory name.
+            sax_path (str): Path to the SAX CINE NIfTI file.
+            ch2_path (str): Path to the LAX 2-chamber CINE NIfTI file.
+            ch4_path (str): Path to the LAX 4-chamber CINE NIfTI file.
+            output_dir (str): Root directory for all pipeline outputs.
+            output_prefix (str): Unique ID / prefix for all output filenames.
         """
 
         logger.info(f"\n===== Starting Full Pipeline for prefix: {output_prefix} =====")
         logger.info(f"  - All outputs will be saved in: {output_dir}")
 
-        # Proactively create the output directory. The -p in `mkdir -p`.
         logger.info(f"Ensuring output directory exists: {output_dir}")
         os.makedirs(output_dir, exist_ok=True)
 
-        # Automatically find the required CINE images using glob
-        # This is robust to different subject ID conventions in filenames.
-        try:
-            sax_image_path = glob.glob(os.path.join(input_dir, '*CINE_image_SAX*.nii.gz'))[0]
-            lax2ch_image_path = glob.glob(os.path.join(input_dir, '*CINE_image_CH2*.nii.gz'))[0]
-            lax4ch_image_path = glob.glob(os.path.join(input_dir, '*CINE_image_CH4*.nii.gz'))[0]
-            logger.info("  - Found all required input CINE images.")
-        except IndexError:
-            logger.error("❌ ERROR: Could not find all required input files in the directory.")
-            logger.error("         Please ensure files containing 'CINE_image_SAX', 'CINE_image_CH2', and 'CINE_image_CH4' exist.")
-            return
-
         # --- 2. Run 2D Segmentation for each view ---
         logger.info("\n--- Step 1: Running 2D Segmentation ---")
-        
-        # Run SAX Segmentation
+
         sax_seg_path = self.segment(
-            input_path=sax_image_path,
-            output_dir=output_dir, # Save to the intermediate folder
+            input_path=sax_path,
+            output_dir=output_dir,
             output_prefix=output_prefix,
-            view_type='sax' 
+            view_type='sax',
         )
 
-        # Run LAX 2CH Segmentation
         lax2ch_seg_path = self.segment(
-            input_path=lax2ch_image_path,
+            input_path=ch2_path,
             output_dir=output_dir,
             output_prefix=output_prefix,
-            view_type='lax_2ch'
+            view_type='lax_2ch',
         )
 
-        # Run LAX 4CH Segmentation
         lax4ch_seg_path = self.segment(
-            input_path=lax4ch_image_path,
+            input_path=ch4_path,
             output_dir=output_dir,
             output_prefix=output_prefix,
-            view_type='lax_4ch'
+            view_type='lax_4ch',
         )
 
         # --- 3. Run 3D Reconstruction ---
