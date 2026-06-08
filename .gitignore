@@ -90,3 +90,5 @@ CARDIOFORM_ENV_SETUP
 release_assets/*
 
 CLAUDE.md
+.claude/
+.claude/** 
