@@ -61,9 +61,9 @@ conda env create -f environment.yaml
 # Activate the environment
 conda activate cardioform
 ```
-### Step 3: Run the `setup.sh` script for easy environment activation 
+### Step 3: Install the package with `setup.sh`
 
-Run the script 
+Run the script (inside the activated env):
 ```shell
 cd cardio-form
 chmod +x setup.sh # if necessary 
@@ -71,14 +71,18 @@ chmod +x setup.sh # if necessary
 ./setup.sh
 ```
 
-This creates a file (not tracked by git) called `CARDIOFORM_ENV_SETUP`, which lets you quickly 
-activate the environment and set the `PYTHONPATH` variable so you can run the different scripts. 
+This installs the shared `pycemrg` core and CardioForm itself as editable packages
+(`pip install -e . --no-deps`), making the `cardioform` command available. It also
+(re)generates `CARDIOFORM_ENV_SETUP` (not tracked by git), which simply runs
+`conda activate cardioform` for new shells. Under the `src/` layout there is no
+`PYTHONPATH` to set.
 
 ## Usage
 
-Once the environment is activated, you can use the provided scripts to run the different parts of the `CardioForm` pipeline. All scripts are located in the `scripts/` directory.
+Once installed, use the single `cardioform` command to run the different parts of the
+`CardioForm` pipeline. Run `cardioform --help` (or `cardioform <mode> --help`) for all options.
 
-### 1. `run_segmentation.py`: Segmenting a 2D MRI
+### 1. `cardioform segment`: Segmenting a 2D MRI
 
 This script runs the `nnunetv2` model to segment a single 2D CINE MRI series (SAX, 2CH, or 4CH).
 
@@ -91,7 +95,7 @@ This script runs the `nnunetv2` model to segment a single 2D CINE MRI series (SA
 
 #### Example:
 ```bash
-python scripts/run_segmentation.py \
+cardioform segment \
     --input /path/to/data/CINE_image_SAX_001.nii.gz \
     --output-dir /path/to/outputs/segmentations \
     --output-prefix "subject-001" \
@@ -99,7 +103,7 @@ python scripts/run_segmentation.py \
 ```
 **Output**: This will create a file named `subject-001_2D_seg_sax.nii.gz` inside the `/path/to/outputs/segmentations/` directory.
 
-### 2. `run_reconstruction.py`: Creating a 3D Model from 2D Segmentations
+### 2. `cardioform reconstruct`: Creating a 3D Model from 2D Segmentations
 This script takes the three 2D segmentations (SAX, 2CH, 4CH) and runs the 3D U-Net to reconstruct the final 
 whole-heart segmentation. 
 This is the perfect tool for re-running the 3D step after manually correcting a 2D segmentation.
@@ -112,7 +116,7 @@ This is the perfect tool for re-running the 3D step after manually correcting a 
 
 #### Example:
 ```bash
-python scripts/run_reconstruction.py \
+cardioform reconstruct \
     --sax-file /path/to/outputs/segmentations/subject-001_2D_seg_sax.nii.gz \
     --ch2-file /path/to/outputs/segmentations/subject-001_2D_seg_lax_2ch.nii.gz \
     --ch4-file /path/to/outputs/segmentations/subject-001_2D_seg_lax_4ch.nii.gz \
@@ -123,8 +127,8 @@ python scripts/run_reconstruction.py \
 **Output:** This will create the final `subject-001_whole_heart_segmentation.nii.gz` in the output directory, 
 along with several intermediate and quality-control files (e.g., ...`_sparse_volume.nii.gz`, ...`_qc_sax_backprojected.nii.gz`).
 
-### 3. `run_full_pipeline.py`: The End-to-End Solution
-This is the main script that automates the entire process. 
+### 3. `cardioform full_pipeline`: The End-to-End Solution
+This is the main command that automates the entire process. 
 It takes a directory of raw CINE images, runs the 2D segmentations for all views, and then automatically runs the 3D reconstruction.
 
 #### Arguments:
@@ -134,7 +138,7 @@ It takes a directory of raw CINE images, runs the 2D segmentations for all views
 * `--device`: The device to run on. Defaults to auto.
 #### Example:
 ```bash
-python scripts/run_full_pipeline.py \
+cardioform full_pipeline \
     --input-dir /path/to/data/subject-001/ \
     --output-dir /path/to/outputs/full_run/ \
     --output-prefix "subject-001_final"
@@ -142,3 +146,19 @@ python scripts/run_full_pipeline.py \
 
 **Output:** This will create a flat list of all files (intermediate segmentations and final reconstruction) in the 
 `/path/to/outputs/full_run/` directory, all prefixed with `subject-001_final`.
+
+### 4. `cardioform labels`: Editing segmentation labels
+
+Filter, merge, or remap labels in a segmentation NIfTI. Labels may be given by name,
+group (from `labels.yaml`), or integer.
+
+```bash
+# Keep only the ventricles group and the aorta
+cardioform labels filter  -i seg.nii.gz -o filtered.nii.gz -l ventricles Ao
+
+# Merge the ventricles into a single label value (1)
+cardioform labels merge   -i seg.nii.gz -o merged.nii.gz   -l ventricles -v 1
+
+# Remap individual labels with OLD:NEW pairs (names or integers)
+cardioform labels relabel -i seg.nii.gz -o relabeled.nii.gz -m MYO_septum:LV_myo 7:0
+```

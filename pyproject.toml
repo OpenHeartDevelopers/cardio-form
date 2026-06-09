@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cardio-form"
+version = "0.3.0"
+description = "Whole-heart segmentation and 3D reconstruction from cardiac CINE MRI."
+readme = "README.md"
+requires-python = ">=3.9"
+
+# NOTE: the heavy, version-pinned scientific stack (numpy==1.24.4, torch/CUDA,
+# nnunetv2, nibabel, scipy, ...) is provisioned by the conda environment
+# (environment.yaml / environment-cpu.yaml), which is the source of truth for
+# those pins. Only pure-Python, conda-independent dependencies are declared
+# here. Install the package with `pip install -e . --no-deps` so pip never
+# re-resolves the conda-managed packages.
+dependencies = [
+    "pycemrg",
+]
+
+[project.scripts]
+cardioform = "cardio_form.cli.entrypoint:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

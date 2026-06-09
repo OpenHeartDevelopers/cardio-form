@@ -1,21 +1,21 @@
-import os
-import argparse 
+import argparse
 
 from cardio_form.pipeline import CHOICES_VIEW_TYPE
 from cardio_form.utils import configure_logging
 logger = configure_logging('Docker')
 
 # ML model methods
-from scripts.run_reconstruct_3d import run_reconstruction_job
-from scripts.run_segmentation import run_segmentation_job
-from scripts.run_full_pipeline import run_full_pipeline_job
-from scripts.run_la_reconstruction import run_la_reconstruction_job
+from cardio_form.cli.reconstruct_3d import run_reconstruction_job
+from cardio_form.cli.segment import run_segmentation_job
+from cardio_form.cli.full_pipeline import run_full_pipeline_job
+from cardio_form.cli.reconstruct_la import run_la_reconstruction_job
 
 # Other utilities
-from scripts.utils.filter_labels import run_filter_labels_job
-from scripts.utils.merge_labels import run_merge_labels_job
+from cardio_form.cli.filter_labels import run_filter_labels_job
+from cardio_form.cli.merge_labels import run_merge_labels_job
+from cardio_form.cli.relabel import run_relabel_job
 
-def main(args):
+def run(args):
     """
     The Main Switchboard.
     It unpacks the 'args' object and calls the specific job functions.
@@ -56,25 +56,36 @@ def main(args):
             output_prefix=args.output_prefix,
             device=args.device
         )
-    elif mode == 'labels': 
+    elif mode == 'labels':
         if args.action == 'filter':
+            if not args.labels:
+                raise SystemExit("Error: 'labels filter' requires -l/--labels")
             run_filter_labels_job(
                 input_path=args.input,
                 output_path=args.output,
                 user_labels_to_keep=args.labels
             )
         elif args.action == 'merge':
+            if not args.labels:
+                raise SystemExit("Error: 'labels merge' requires -l/--labels")
             run_merge_labels_job(
                 input_path=args.input,
                 output_path=args.output,
                 user_labels_to_keep=args.labels,
                 value_after_merge=args.value_after_merge
             )
+        elif args.action == 'relabel':
+            if not args.map:
+                raise SystemExit("Error: 'labels relabel' requires -m/--map")
+            run_relabel_job(
+                input_path=args.input,
+                output_path=args.output,
+                mapping_pairs=args.map
+            )
     
 
 
-if __name__ == "__main__":
-
+def main():
     ml_parent_parser = argparse.ArgumentParser(add_help=False)
     
     # Common Output Args
@@ -114,14 +125,21 @@ if __name__ == "__main__":
     la_reconstruct_parser.add_argument("--device", default="cpu", choices=['cpu', 'cuda'], help="Device to run the model on.")
 
     # --- Parser for label utilities mode ---
-    labels_parser = subparsers.add_parser('labels', help='Utilities for filtering labels in segmentation files.')
-    labels_parser.add_argument("action", choices=['filter', 'merge'], help="The label utility action to perform.")
+    labels_parser = subparsers.add_parser('labels', help='Utilities for editing labels in segmentation files (filter / merge / relabel).')
+    labels_parser.add_argument("action", choices=['filter', 'merge', 'relabel'], help="The label utility action to perform.")
     labels_parser.add_argument("-i", "--input", required=True,  help="Path to the input segmentation NIfTI file.")
-    labels_parser.add_argument("-o", "--output", required=True,  help="Path for the new, filtered output NIfTI file.")
-    labels_parser.add_argument("-l", "--labels", required=True, nargs='+', type=str, help="A space-separated list of labels to keep. "
+    labels_parser.add_argument("-o", "--output", required=True,  help="Path for the new output NIfTI file.")
+    labels_parser.add_argument("-l", "--labels", required=False, nargs='+', type=str, help="(filter/merge) A space-separated list of labels. "
                              "Can be names (LV_myo), groups (ventricles), or numbers (5). "
                              "Example: --labels ventricles LA_bp 7")
-    labels_parser.add_argument("-v", "--value-after-merge", required=False, type=int, default=None, help="The label value to assign to the merged labels ")
+    labels_parser.add_argument("-v", "--value-after-merge", required=False, type=int, default=None, help="(merge) The label value to assign to the merged labels.")
+    labels_parser.add_argument("-m", "--map", required=False, nargs='+', type=str, help="(relabel) Space-separated OLD:NEW pairs. "
+                             "Each side can be a name (MYO_septum) or a number. "
+                             "Example: --map MYO_septum:LV_myo 7:0")
     
     args = parser.parse_args()
-    main(args)    
+    run(args)
+
+
+if __name__ == "__main__":
+    main()

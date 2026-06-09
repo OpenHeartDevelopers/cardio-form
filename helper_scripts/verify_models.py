@@ -1,11 +1,5 @@
-# in scripts/verify_models.py
-
-import os
-import sys
-
-# This adds the project root to the Python path, allowing us to import `cardio_form`
-# from a script in a subdirectory.
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# helper_scripts/verify_models.py
+# Run after `pip install -e .` (cardio_form is importable from the installed package).
 
 from cardio_form.models import ModelManager
 

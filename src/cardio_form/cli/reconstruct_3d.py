@@ -1,11 +1,5 @@
-# scripts/run_reconstruct_3d.py
-
-import os
 import sys
 import argparse
-
-# Keep this for standalone usage, but in Docker, PYTHONPATH usually handles this.
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from cardio_form.pipeline import CardioForm
 from cardio_form.utils import configure_logging

@@ -1,12 +1,7 @@
-# in scripts/run_full_pipeline.py
-
 import os
 import sys
 import argparse
 import glob as _glob
-
-# Add the project root to the Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from cardio_form.pipeline import CardioForm
 from cardio_form.utils import configure_logging

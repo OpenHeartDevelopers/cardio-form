@@ -14,7 +14,13 @@ This document outlines the planned tasks for improving, refactoring, and finaliz
 
 ### Priority 2: New Features & Immediate Refactoring
 
--   [ ] **Implement the `relabel` Feature**
+> **v0.3 status:** both Priority 2 items DONE. `cardio_form/io.py` added; `relabel`
+> shipped as `cardioform labels relabel` (orchestrator `cli/relabel.py`); all
+> geometry I/O moved out into `io.py` (label ops + the recon plane/contour loaders,
+> now `compute_*` taking arrays). Note: orchestrators live in `src/cardio_form/cli/`,
+> not `scripts/` (P3 src-layout move).
+
+-   [x] **Implement the `relabel` Feature** (v0.3)
     -   **Goal:** Provide users with a CLI tool to remap, merge, or delete segmentation labels from a NIfTI file.
     -   **Plan:**
         1.  Create a new `cardio_form/io.py` module to centralize NIfTI loading and saving logic.
@@ -22,7 +28,7 @@ This document outlines the planned tasks for improving, refactoring, and finaliz
         3.  Create an orchestrator script, `scripts/utils/run_relabel.py`, to handle CLI arguments and orchestrate the I/O and geometry calls.
         4.  Integrate the new script into `docker/entrypoint.py` under a `relabel` mode.
 
--   [ ] **Refactor `geometry.py` to Separate I/O from Logic**
+-   [x] **Refactor `geometry.py` to Separate I/O from Logic** (v0.3)
     -   **Goal:** Reduce technical debt and improve testability by ensuring core logic functions do not perform file I/O.
     -   **Plan:**
         1.  Apply the pattern established by the `relabel` feature to all other functions in `geometry.py` that currently handle file paths (e.g., `filter_labels`, `merge_labels`, `load_sax_plane_geometry`).
@@ -30,7 +36,7 @@ This document outlines the planned tasks for improving, refactoring, and finaliz
 
 ### Priority 3: Major Architectural Rework
 
--   [ ] **Refactor Project to use a `src` Layout**
+-   [x] **Refactor Project to use a `src` Layout** (v0.3 — done as a full installable package: `pyproject.toml`, `pip install -e .`, console script `cardioform`, no PYTHONPATH/sys.path hacks. Dockerfiles + setup.sh updated.)
     -   **Goal:** Align the project structure with modern Python packaging standards for improved clarity and prevention of common import issues.
     -   **Plan:**
         1.  Create a `src/` directory in the project root.
@@ -40,12 +46,18 @@ This document outlines the planned tasks for improving, refactoring, and finaliz
             -   Any paths in GitHub Actions workflows (`.github/workflows/`).
             -   Local development environment setup instructions.
 
--   [ ] **Migrate to `cemrg-core-utils` Shared Library**
+-   [~] **Migrate to `pycemrg` Shared Library** (formerly "cemrg-core-utils"; PARTIAL)
     -   **Goal:** Centralize common code, reduce maintenance overhead, and align with dependent projects like `MyoScint`.
-    -   **Plan:**
-        1.  Add `cemrg-core-utils` as a dependency in `environment.yaml` and `environment-cpu.yaml`.
-        2.  Remove the local implementations of `ModelManager`, `LabelManager`, and `OutputManager` from the `cardio_form` codebase.
-        3.  Refactor all internal code to import and use these managers from the new shared library. This will primarily affect `pipeline.py`, `segment_2d.py`, and the entrypoint.
+    -   **Done (v0.3):** `pycemrg` added as a dependency (declared in `pyproject.toml`; conda owns the
+        scientific stack, installed via `pip install -e . --no-deps`). `LabelManager` migrated:
+        `cardio_form/labels.py` is now a thin shim re-exporting `pycemrg.data.LabelManager`
+        (schema + API are drop-in compatible).
+    -   **Deferred to v0.3.1:**
+        1.  `ModelManager` -> `pycemrg.assets.AssetManager` (needs `models.yaml` schema reconciliation
+            for `unzipped_target_path`; touches the model download/unzip hot path).
+        2.  `OutputManager` -> `pycemrg.files.OutputManager` (API differs: suffix registry vs raw suffix,
+            `str` vs `Path`; needs a thin wrapper to preserve the canonical suffix map).
+        3.  `utils.configure_logging` -> `pycemrg.core.logs.setup_logging` (pervasive call-site change).
 
 
 

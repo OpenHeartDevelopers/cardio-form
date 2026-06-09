@@ -7,6 +7,7 @@ from pathlib import Path
 from tqdm import tqdm
 
 from cardio_form.utils import configure_logging
+from cardio_form.config import config_path
 logger = configure_logging(__name__)
 
 # --- Helper for TQDM progress bar ---
@@ -25,7 +26,7 @@ class ModelManager:
     """
     def __init__(self, manifest_path=None, cache_dir=None):
         if manifest_path is None:
-            manifest_path = Path(__file__).parent.parent / 'models.yaml'
+            manifest_path = config_path('models.yaml')
         if cache_dir is None:
             cache_dir = Path.home() / '.cache' / 'cardio_form'
 

@@ -1,9 +1,5 @@
-import os 
-import sys 
-import argparse 
-
-# This adds the project root to the Python path, allowing us to import `cardio_form`
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import sys
+import argparse
 
 from cardio_form.pipeline import CardioForm
 from cardio_form.utils import configure_logging

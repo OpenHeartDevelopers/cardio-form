@@ -9,6 +9,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 
 import cardio_form.geometry as geometry
+import cardio_form.io as cf_io
 from cardio_form.utils import configure_logging
 logger = configure_logging('Reconstruct3D')
 from cardio_form.output_managers import OutputManager
@@ -185,16 +186,20 @@ def run_3d_reconstruction(model, sax_file, ch2_file, ch4_file, output_dir,
     # ========================================================================
     logger.info("Loading input segmentations...")
     
-    # Load SAX (multi-slice short-axis)
-    sax_pc, _, sax_affine = geometry.load_sax_contour_geometry(sax_file)
-    sax_ps, _, sax_ipp, sax_ipo, sax_pxs, sax_lab = geometry.load_sax_plane_geometry(sax_file)
-    
-    # Load 2-chamber long-axis files
-    ch2_pc, ch2_affine = geometry.load_lax_contour_geometry(ch2_file)
-    ch4_pc, ch4_affine = geometry.load_lax_contour_geometry(ch4_file)
+    # Load each NIfTI once; geometry now operates on arrays + affines.
+    sax_data, sax_affine = cf_io.load_data_and_affine(sax_file)
+    ch2_data, ch2_affine = cf_io.load_data_and_affine(ch2_file)
+    ch4_data, ch4_affine = cf_io.load_data_and_affine(ch4_file)
 
-    ch2_ps, ch2_ipp, ch2_ipo, ch2_pxs, ch2_lab = geometry.load_lax_plane_geometry(ch2_file)
-    ch4_ps, ch4_ipp, ch4_ipo, ch4_pxs, ch4_lab = geometry.load_lax_plane_geometry(ch4_file)
+    # SAX (multi-slice short-axis)
+    sax_pc, _, _ = geometry.compute_sax_contour_geometry(sax_data, sax_affine)
+    sax_ps, _, sax_ipp, sax_ipo, sax_pxs, sax_lab = geometry.compute_sax_plane_geometry(sax_data, sax_affine)
+
+    # 2- and 4-chamber long-axis
+    ch2_pc, _ = geometry.compute_lax_contour_geometry(ch2_data, ch2_affine)
+    ch4_pc, _ = geometry.compute_lax_contour_geometry(ch4_data, ch4_affine)
+    ch2_ps, ch2_ipp, ch2_ipo, ch2_pxs, ch2_lab = geometry.compute_lax_plane_geometry(ch2_data, ch2_affine)
+    ch4_ps, ch4_ipp, ch4_ipo, ch4_pxs, ch4_lab = geometry.compute_lax_plane_geometry(ch4_data, ch4_affine)
      
     # ========================================================================
     # STEP 2: Generate sparse 3D volume (forward projection)

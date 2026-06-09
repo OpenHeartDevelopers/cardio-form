@@ -298,20 +298,6 @@ def image_save_nifti_ori(img_file_2ch, img_file_4ch, prd_tyi):
     nif_prd_bp_4ch = nib.Nifti1Image(vol_4ch, affine=affine_4ch)
     return nif_prd_bp_2ch, nif_prd_bp_4ch
 
-# run network model
-def model_load():
-    device = torch.device("cuda:0")
-
-    unet = ReconstructLaUNet3d(in_channel=1, out_channel=6)
-    unet.to(device, dtype=torch.float)
-
-    #model_list = ['model_due/exp_plus/epoch_219_params.pth']
-    model_list= ['/mnt/creator_ssd/Whole_heart_pipline/3D_segmentation/LA_3d_seg/model_due/exp_plus/epoch_219_params.pth']
-    model_i = model_list[0]
-    checkpoint = torch.load(model_i)
-    unet.load_state_dict(checkpoint['model_state_dict'])
-    return unet
-
 def load_la_model(model_file: str, device_str: str = 'cpu') -> nn.Module:
     """
     Load the 3D reconstruction model from checkpoint.

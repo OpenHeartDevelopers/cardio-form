@@ -1,10 +1,6 @@
-# scripts/run_segmentation.py
-
-import os
 import sys
 import argparse
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from cardio_form.pipeline import CardioForm, CHOICES_VIEW_TYPE
 from cardio_form.utils import configure_logging
 logger = configure_logging('ScriptSegment2D')
