@@ -40,3 +40,4 @@ dependencies:
     - numpy==1.24.4
     - natsort
     - batchgenerators
+    - python-gdcm==3.2.2   # pin: 3.2.6 is sdist-only (no cp39 wheel) and fails to build
