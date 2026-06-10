@@ -25,16 +25,35 @@ def _find_single(directory: str, pattern: str) -> str:
     return matches[0]
 
 
-def run_full_pipeline_job(input_dir, output_dir, output_prefix, device='cpu'):
+def _resolve_view(view_name, explicit_path, input_dir, pattern, flag_hint):
+    """Resolve one input view: explicit path wins, else glob from input_dir.
+
+    Raises a clear error if neither source can supply the file.
+    """
+    if explicit_path:
+        return explicit_path
+    if input_dir:
+        return _find_single(input_dir, pattern)
+    raise FileNotFoundError(
+        f"No source for the {view_name} image: pass {flag_hint} "
+        f"or provide --input-dir containing a '{pattern}' file."
+    )
+
+
+def run_full_pipeline_job(output_dir, output_prefix, device='cpu',
+                          input_dir=None, sax_path=None, ch2_path=None, ch4_path=None):
     """
     Pure Python function to run the full pipeline.
     Accepts standard types, not argparse objects.
+
+    Each view is resolved independently: an explicit *_path argument takes
+    precedence; otherwise the file is discovered by glob inside input_dir.
     """
     logger.info("--- Initializing CardioForm Pipeline ---")
 
-    sax_path  = _find_single(input_dir, _SAX_PATTERN)
-    ch2_path  = _find_single(input_dir, _CH2_PATTERN)
-    ch4_path  = _find_single(input_dir, _CH4_PATTERN)
+    sax_path  = _resolve_view("SAX",  sax_path, input_dir, _SAX_PATTERN, "-sax/--sax-file")
+    ch2_path  = _resolve_view("2CH",  ch2_path, input_dir, _CH2_PATTERN, "-ch2/--ch2-file")
+    ch4_path  = _resolve_view("4CH",  ch4_path, input_dir, _CH4_PATTERN, "-ch4/--ch4-file")
     logger.info("Found all required input CINE images.")
 
     try:
@@ -61,6 +80,9 @@ def main(args):
     try:
         run_full_pipeline_job(
             input_dir=args.input_dir,
+            sax_path=args.sax_file,
+            ch2_path=args.ch2_file,
+            ch4_path=args.ch4_file,
             output_dir=args.output_dir,
             output_prefix=args.output_prefix,
             device=args.device
@@ -74,7 +96,10 @@ if __name__ == "__main__":
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     
-    parser.add_argument("--input-dir", required=True,  help="Path to the input directory containing the raw CINE MRI images.")
+    parser.add_argument("--input-dir", required=False, default=None, help="Directory of raw CINE MRI images; views are auto-discovered by glob. Optional if the explicit view flags are given.")
+    parser.add_argument("-sax", "--sax-file", default=None, help="Path to SAX NIfTI (overrides discovery from --input-dir).")
+    parser.add_argument("-ch2", "--ch2-file", default=None, help="Path to 2CH NIfTI (overrides discovery from --input-dir).")
+    parser.add_argument("-ch4", "--ch4-file", default=None, help="Path to 4CH NIfTI (overrides discovery from --input-dir).")
     parser.add_argument("--output-dir", required=True,  help="Path to the root directory where all outputs will be saved.")
     parser.add_argument("-p", "--output-prefix", required=True, help="Prefix for all output filenames (inferred if not provided).")
     parser.add_argument("--device", default="cpu", choices=['auto', 'cpu', 'cuda'], help="Device to run the models on.")

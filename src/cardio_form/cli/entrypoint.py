@@ -43,6 +43,9 @@ def run(args):
     elif mode == 'full_pipeline' or mode == 'full':
         run_full_pipeline_job(
             input_dir=args.input_dir,
+            sax_path=args.sax_file,
+            ch2_path=args.ch2_file,
+            ch4_path=args.ch4_file,
             output_dir=args.output_dir,
             output_prefix=args.output_prefix,
             device=args.device
@@ -112,7 +115,10 @@ def main():
 
     # --- Parser for full_pipeline mode ---
     full_pipeline_parser = subparsers.add_parser('full_pipeline', parents=[ml_parent_parser], aliases=['full'], help='Run the full CardioForm pipeline: 2D Segmentation -> 3D Reconstruction.')
-    full_pipeline_parser.add_argument("--input-dir", required=True,  help="Path to the input directory containing the raw CINE MRI images.")
+    full_pipeline_parser.add_argument("--input-dir", required=False, default=None, help="Directory of raw CINE MRI images; views are auto-discovered by glob. Optional if the explicit view flags are given.")
+    full_pipeline_parser.add_argument("-sax", "--sax-file", default=None, help="Path to SAX NIfTI (overrides discovery from --input-dir).")
+    full_pipeline_parser.add_argument("-ch2", "--ch2-file", default=None, help="Path to 2CH NIfTI (overrides discovery from --input-dir).")
+    full_pipeline_parser.add_argument("-ch4", "--ch4-file", default=None, help="Path to 4CH NIfTI (overrides discovery from --input-dir).")
 
     # --- Parser for LA reconstruction mode ---
     la_reconstruct_parser = subparsers.add_parser('reconstruct_la', aliases=['la_3d'], help='Run LA 3D reconstruction from 2D segmentations.')
