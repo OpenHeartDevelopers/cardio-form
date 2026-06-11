@@ -2,6 +2,37 @@
 
 This document outlines the planned tasks for improving, refactoring, and finalizing the CardioForm library. The tasks are organized by priority, from immediate fixes to major architectural upgrades.
 
+### Priority 0: Environment Health — Python 3.11 Upgrade & Test Hardening
+
+> Full step-by-step plan: [`docs/python-3_11-upgrade-plan.md`](./python-3_11-upgrade-plan.md).
+> Driver: the env is pinned to **Python 3.9 (EOL Oct 2025)**, which forces a cascade
+> of brittle secondary pins (`numpy==1.24.4`, `python-gdcm==3.2.2`). The GPU/CUDA path
+> stays (Linux server); macOS uses the CPU file. Bump to 3.11 **only behind a test net**.
+
+-   [ ] **Phase 0 — Unblock macOS & housekeeping** (no version changes)
+    -   **Goal:** Let macOS users install today; stop the next person hitting the same wall.
+    -   **Plan:** Fix `setup.sh` activation-name mismatch (`cardioform` vs `cardioform-cpu`);
+        drop the dead `nvidia` channel from `environment-cpu.yaml`; document the
+        Linux-GPU / macOS-CPU split in `README.md` (incl. why `environment.yaml`
+        cannot solve on macOS). See plan §Phase 0.
+-   [ ] **Phase 1 — Test harness + baseline on Python 3.9**
+    -   **Goal:** Build the safety net while still on 3.9 to capture known-good behaviour.
+    -   **Plan:** Add `pytest` `dev` extra + `heavy` marker; unit (characterization) tests
+        for the light tier (`geometry`, `io`, `labels`, `config`, `models`,
+        `output_managers`, `utils`); CLI integration tests via argparse/subprocess;
+        skip-by-default heavy smoke test for `segment_2d`; CI workflow for the light
+        suite. See plan §Phase 1.
+-   [ ] **Phase 2 — Python 3.11 bump (on a branch)**
+    -   **Goal:** Bump to 3.11 and dissolve the forced pins, validated against the Phase 1 baseline.
+    -   **Plan:** `python=3.11` in both env files; unpin `python-gdcm`; NumPy → `>=1.26,<2.0`;
+        fix known landmines (`scipy.ndimage.morphology` import in `geometry.py`,
+        `torch.autograd.Variable` in `reconstruct_*`); rerun suite; validate both Docker
+        images + GPU server. See plan §Phase 2.
+-   [ ] **Phase 3 — Relax the pin strategy**
+    -   **Goal:** Reduce future brittleness once 3.11 is proven.
+    -   **Plan:** Convert exact `==` pins to compatible ranges; capture reproducibility in a
+        separate generated lockfile rather than the source-of-truth env files. See plan §Phase 3.
+
 ### Priority 1: Restore Core Functionality
 
 -   [ ] **Fix the GPU Docker Image Build Failure**
