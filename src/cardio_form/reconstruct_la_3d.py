@@ -294,8 +294,8 @@ def image_save_nifti_ori(img_file_2ch, img_file_4ch, prd_tyi):
     vol_4ch = np.zeros(np.shape(img_4ch))
     vol_2ch = grid_point_assign(vol_2ch, x_2ch_, i_2ch_, interp_vol)
     vol_4ch = grid_point_assign(vol_4ch, x_4ch_, i_4ch_, interp_vol)
-    nif_prd_bp_2ch = nib.Nifti1Image(vol_2ch, affine=affine_2ch)
-    nif_prd_bp_4ch = nib.Nifti1Image(vol_4ch, affine=affine_4ch)
+    nif_prd_bp_2ch = nib.Nifti1Image(vol_2ch.astype(np.uint8), affine=affine_2ch)
+    nif_prd_bp_4ch = nib.Nifti1Image(vol_4ch.astype(np.uint8), affine=affine_4ch)
     return nif_prd_bp_2ch, nif_prd_bp_4ch
 
 def load_la_model(model_file: str, device_str: str = 'cpu') -> nn.Module:
@@ -349,7 +349,7 @@ def mr_lax_inference(unet, img_file_2ch, img_file_4ch, device_str: str):
     output = unet(t_x)
     pred = output.detach().cpu().numpy()
     prd_tyi = np.flip(np.argmax(pred, axis=1).squeeze(), axis=1)
-    nifti_la = nib.Nifti1Image(prd_tyi.astype(float), affine=affine)
+    nifti_la = nib.Nifti1Image(prd_tyi.astype(np.uint8), affine=affine)
     nif_prd_bp_2ch, nif_prd_bp_4ch = image_save_nifti_ori(img_file_2ch, img_file_4ch, prd_tyi)
     return data_in, nifti_la, nif_prd_bp_2ch, nif_prd_bp_4ch
 

@@ -725,7 +725,7 @@ def vol_grid_bp(
                 f"were projected out of the target volume's bounds. This is usually acceptable."
             )
 
-    return ch2_bp, ch4_bp, sax_bp
+    return ch2_bp.astype(np.uint8), ch4_bp.astype(np.uint8), sax_bp.astype(np.uint8)
 
 
 ## post processing helpers
