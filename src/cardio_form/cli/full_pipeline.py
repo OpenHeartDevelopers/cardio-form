@@ -3,7 +3,6 @@ import sys
 import argparse
 import glob as _glob
 
-from cardio_form.pipeline import CardioForm
 from cardio_form.utils import configure_logging
 logger = configure_logging(__name__)
 
@@ -49,6 +48,8 @@ def run_full_pipeline_job(output_dir, output_prefix, device='cpu',
     Each view is resolved independently: an explicit *_path argument takes
     precedence; otherwise the file is discovered by glob inside input_dir.
     """
+    # Imported here, not at module scope: pulls in torch/nnunetv2 (~3.5s).
+    from cardio_form.pipeline import CardioForm
     logger.info("--- Initializing CardioForm Pipeline ---")
 
     sax_path  = _resolve_view("SAX",  sax_path, input_dir, _SAX_PATTERN, "-sax/--sax-file")

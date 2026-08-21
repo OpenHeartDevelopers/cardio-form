@@ -1,19 +1,22 @@
 # In cardio_form/pipeline.py
 
 import os
-import torch
 
 from cardio_form.utils import configure_logging
 logger = configure_logging('CardioFormPipeline')
 
-# Each of these modules contains complex, low-level logic.
+# Each of these modules contains complex, low-level logic and pulls in torch.
+# Importing this module is therefore expensive; the CLI defers importing
+# cardio_form.pipeline until a job actually runs.
 import cardio_form.reconstruct_3d as reconstruct_3d
 import cardio_form.reconstruct_la_3d as reconstruct_la
 import cardio_form.segment_2d as segment_2d  
 
 from cardio_form.models  import default_model_manager
 
-CHOICES_VIEW_TYPE = ['sax', 'lax_2ch', 'lax_4ch']
+# Re-exported from config so `from cardio_form.pipeline import CHOICES_VIEW_TYPE`
+# keeps working; config.py is the single definition.
+from cardio_form.config import CHOICES_VIEW_TYPE
 
 class CardioForm:
     """
@@ -29,6 +32,7 @@ class CardioForm:
             device (str): The device to run models on ('auto', 'cpu', 'cuda').
         """
         if device == 'auto':
+            import torch
             self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         else:
             self.device = device

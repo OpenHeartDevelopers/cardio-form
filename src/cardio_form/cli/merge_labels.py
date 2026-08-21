@@ -1,13 +1,15 @@
 import sys
 import argparse
 
-from cardio_form import geometry
-from cardio_form import io as cf_io
-from cardio_form.labels import default_label_manager # Import the default manager instance
 from cardio_form.utils import configure_logging
 logger = configure_logging('ScriptMergeLabels')
 
 def run_merge_labels_job(input_path, output_path, user_labels_to_keep, value_after_merge=None):
+    # Imported here, not at module scope: geometry pulls in scipy (~0.4s)
+    # and io pulls in nibabel (~0.3s).
+    from cardio_form import geometry
+    from cardio_form import io as cf_io
+    from cardio_form.labels import default_label_manager
     logger.info(f"User requested to merge labels: {user_labels_to_keep}")
     try:
         # Use the label manager to translate the user's flexible input

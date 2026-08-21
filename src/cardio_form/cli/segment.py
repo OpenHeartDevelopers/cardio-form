@@ -1,7 +1,7 @@
 import sys
 import argparse
 
-from cardio_form.pipeline import CardioForm, CHOICES_VIEW_TYPE
+from cardio_form.config import CHOICES_VIEW_TYPE
 from cardio_form.utils import configure_logging
 logger = configure_logging('ScriptSegment2D')
 
@@ -10,6 +10,8 @@ def run_segmentation_job(input_path, output_dir, view_type, output_prefix, devic
     Pure Python function to run the segmentation. 
     Accepts standard types, not argparse objects.
     """
+    # Imported here, not at module scope: pulls in torch/nnunetv2 (~3.5s).
+    from cardio_form.pipeline import CardioForm
     logger.info("--- Initializing CardioForm Pipeline ---")
     
     try:

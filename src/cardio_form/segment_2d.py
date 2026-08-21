@@ -1,10 +1,11 @@
 # in cardio_form/segment_2d.py
 import os
-import torch
 import numpy as np
-import SimpleITK as sitk
-from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
-from nnunetv2.imageio.simpleitk_reader_writer import SimpleITKIO
+
+# torch, SimpleITK and nnunetv2 are imported lazily inside run_segmentation.
+# Importing nnunetv2 at module scope costs ~2.3s and prints the
+# nnUNet_raw / nnUNet_preprocessed / nnUNet_results warnings on every
+# `cardioform` invocation, including `--help`.
 
 from cardio_form.utils import configure_logging
 logger = configure_logging('Segment2D')
@@ -29,6 +30,11 @@ def run_segmentation(
                           (e.g., '/path/to/weights/sax_segment_checkpoint_final.pth').
         device (str): Device to run inference on ('cuda' or 'cpu').
     """
+    import torch
+    import SimpleITK as sitk
+    from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
+    from nnunetv2.imageio.simpleitk_reader_writer import SimpleITKIO
+
     # --- YOUR SUGGESTION ---
     # Dynamically determine the model directory and checkpoint name from the path
     model_dir = os.path.dirname(os.path.dirname(model_path)) # nnU-Net needs the parent of the 'fold_all' folder

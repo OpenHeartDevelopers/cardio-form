@@ -29,3 +29,8 @@ def config_dir() -> Path:
 def config_path(filename: str) -> Path:
     """Absolute path to a config file (e.g. ``config_path('labels.yaml')``)."""
     return config_dir() / filename
+
+
+# Valid cardiac view identifiers. Defined here rather than in pipeline.py so the
+# CLI can build its argparse choices without importing the heavy model stack.
+CHOICES_VIEW_TYPE = ['sax', 'lax_2ch', 'lax_4ch']

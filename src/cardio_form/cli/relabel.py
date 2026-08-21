@@ -1,15 +1,14 @@
 import sys
 import argparse
 
-from cardio_form import geometry
-from cardio_form import io as cf_io
-from cardio_form.labels import default_label_manager  # Import the default manager instance
 from cardio_form.utils import configure_logging
 logger = configure_logging('ScriptRelabel')
 
 
 def _resolve_label(token: str) -> int:
     """Resolve a single label token (integer string or label name) to an int."""
+    from cardio_form.labels import default_label_manager
+
     token = token.strip()
     if token.isdigit():
         return int(token)
@@ -36,6 +35,10 @@ def run_relabel_job(input_path, output_path, mapping_pairs):
     Pure Python function to remap labels in a segmentation file.
     Accepts standard types, not argparse objects.
     """
+    # Imported here, not at module scope: geometry pulls in scipy (~0.4s)
+    # and io pulls in nibabel (~0.3s).
+    from cardio_form import geometry
+    from cardio_form import io as cf_io
     logger.info(f"User requested label remapping: {mapping_pairs}")
     try:
         # Translate the user's flexible OLD:NEW pairs into a clean integer mapping.

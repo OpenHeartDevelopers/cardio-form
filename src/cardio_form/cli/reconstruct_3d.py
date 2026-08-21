@@ -1,7 +1,6 @@
 import sys
 import argparse
 
-from cardio_form.pipeline import CardioForm
 from cardio_form.utils import configure_logging
 
 # Create a module-level logger
@@ -12,6 +11,8 @@ def run_reconstruction_job(sax_path, ch2_path, ch4_path, output_dir, output_pref
     Pure Python function to run the reconstruction. 
     Accepts standard types, not argparse objects.
     """
+    # Imported here, not at module scope: pulls in torch/nnunetv2 (~3.5s).
+    from cardio_form.pipeline import CardioForm
     logger.info("--- Initializing CardioForm Pipeline ---")
     
     try:

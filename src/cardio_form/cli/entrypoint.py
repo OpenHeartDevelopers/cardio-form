@@ -1,29 +1,33 @@
 import argparse
 
-from cardio_form.pipeline import CHOICES_VIEW_TYPE
+from cardio_form.config import CHOICES_VIEW_TYPE
 from cardio_form.utils import configure_logging
 logger = configure_logging('Docker')
 
-# ML model methods
-from cardio_form.cli.reconstruct_3d import run_reconstruction_job
-from cardio_form.cli.segment import run_segmentation_job
-from cardio_form.cli.full_pipeline import run_full_pipeline_job
-from cardio_form.cli.reconstruct_la import run_la_reconstruction_job
+# The job functions are imported lazily inside run(), at the point of dispatch.
+# Importing them here would pull torch and nnunetv2 into every invocation,
+# including `cardioform --help`.
 
-# Other utilities
-from cardio_form.cli.filter_labels import run_filter_labels_job
-from cardio_form.cli.merge_labels import run_merge_labels_job
-from cardio_form.cli.relabel import run_relabel_job
+# Sub-command aliases -> canonical mode name. Must stay in sync with the
+# `aliases=` lists passed to add_parser() in main().
+MODE_ALIASES = {
+    '3d': 'reconstruct',
+    'la_3d': 'reconstruct_la',
+    'full': 'full_pipeline',
+}
 
 def run(args):
     """
     The Main Switchboard.
     It unpacks the 'args' object and calls the specific job functions.
     """
-    mode = args.mode
+    # argparse sets dest='mode' to the alias the user actually typed, not the
+    # canonical parser name, so resolve it back before dispatching.
+    mode = MODE_ALIASES.get(args.mode, args.mode)
     logger.info(f'Attempting mode: {mode}')
     
     if mode == 'reconstruct':
+        from cardio_form.cli.reconstruct_3d import run_reconstruction_job
         run_reconstruction_job(
             sax_path=args.sax_file,
             ch2_path=args.ch2_file,
@@ -33,6 +37,7 @@ def run(args):
             device=args.device
         )
     elif mode == 'segment':
+        from cardio_form.cli.segment import run_segmentation_job
         run_segmentation_job(
             input_path=args.input,
             output_dir=args.output_dir,
@@ -40,7 +45,8 @@ def run(args):
             output_prefix=args.output_prefix,
             device=args.device
         )
-    elif mode == 'full_pipeline' or mode == 'full':
+    elif mode == 'full_pipeline':
+        from cardio_form.cli.full_pipeline import run_full_pipeline_job
         run_full_pipeline_job(
             input_dir=args.input_dir,
             sax_path=args.sax_file,
@@ -52,6 +58,7 @@ def run(args):
         )
 
     elif mode == 'reconstruct_la':
+        from cardio_form.cli.reconstruct_la import run_la_reconstruction_job
         run_la_reconstruction_job(
             ch2_file=args.ch2_file,
             ch4_file=args.ch4_file,
@@ -61,6 +68,7 @@ def run(args):
         )
     elif mode == 'labels':
         if args.action == 'filter':
+            from cardio_form.cli.filter_labels import run_filter_labels_job
             if not args.labels:
                 raise SystemExit("Error: 'labels filter' requires -l/--labels")
             run_filter_labels_job(
@@ -69,6 +77,7 @@ def run(args):
                 user_labels_to_keep=args.labels
             )
         elif args.action == 'merge':
+            from cardio_form.cli.merge_labels import run_merge_labels_job
             if not args.labels:
                 raise SystemExit("Error: 'labels merge' requires -l/--labels")
             run_merge_labels_job(
@@ -78,6 +87,7 @@ def run(args):
                 value_after_merge=args.value_after_merge
             )
         elif args.action == 'relabel':
+            from cardio_form.cli.relabel import run_relabel_job
             if not args.map:
                 raise SystemExit("Error: 'labels relabel' requires -m/--map")
             run_relabel_job(
@@ -85,7 +95,9 @@ def run(args):
                 output_path=args.output,
                 mapping_pairs=args.map
             )
-    
+    else:
+        raise SystemExit(f"Error: unhandled mode '{args.mode}'.")
+
 
 
 def main():
@@ -103,7 +115,7 @@ def main():
     subparsers = parser.add_subparsers(dest='mode', required=True)
     
     # --- Parser for the reconstruction mode ---
-    reconstruct_parser = subparsers.add_parser('reconstruct', parents=[ml_parent_parser], aliases=['reconstrunct_3d', '3d'], help='Run 3D reconstruction from 2D segmentations.')
+    reconstruct_parser = subparsers.add_parser('reconstruct', parents=[ml_parent_parser], aliases=['3d'], help='Run 3D reconstruction from 2D segmentations.')
     reconstruct_parser.add_argument("-sax", "--sax-file", required=True, help="Path to SAX NIfTI.")
     reconstruct_parser.add_argument("-ch2", "--ch2-file", required=True, help="Path to 2CH NIfTI.")
     reconstruct_parser.add_argument("-ch4", "--ch4-file", required=True, help="Path to 4CH NIfTI.")
