@@ -16,7 +16,11 @@ Two complementary checks:
 
   Mode B (content):    --sax-seg / --sax-bp
       Compares the SAX segmentation (`_2D_seg_sax.nii.gz`) against the SAX
-      backprojection (`_intermediate_qc_sax_backprojected.nii.gz`). Both share
+      backprojection (`_intermediate_qc_sax_backprojected.nii.gz`).
+
+      NOTE: the backprojection is only written when the reconstruction was run
+      with `-qc` / `--quality-control`. Re-run `cardioform reconstruct -qc ...`
+      if the file is missing. Both share
       the same grid, but the backprojection's content comes from the
       LAX-anchored 3D model. If `seg[..., k]` matches `bp[..., N-1-k]` better
       than `bp[..., k]`, the SAX apex<->base slice order is reversed relative to
@@ -267,7 +271,7 @@ def main():
     parser.add_argument("--sax-seg", dest="sax_seg",
                         help="SAX segmentation '_2D_seg_sax.nii.gz' (mode B).")
     parser.add_argument("--sax-bp", dest="sax_bp",
-                        help="SAX backprojection '_intermediate_qc_sax_backprojected.nii.gz' (mode B).")
+                        help="SAX backprojection '_intermediate_qc_sax_backprojected.nii.gz' (mode B). Only written when reconstruction ran with -qc.")
     args = parser.parse_args()
 
     mode_a = all([args.sax, args.ch2, args.ch4])

@@ -113,6 +113,7 @@ This is the perfect tool for re-running the 3D step after manually correcting a 
 * `--output-dir`: Directory where the output files will be saved.
 * `--output-prefix`: A name to prefix all output filenames.
 * `--device`: The device to run on. Defaults to auto.
+* `-qc, --quality-control`: Also write the sparse volume and back-projections. Off by default.
 
 #### Example:
 ```bash
@@ -124,8 +125,9 @@ cardioform reconstruct \
     --output-prefix "subject-001"
 ```
 
-**Output:** This will create the final `subject-001_whole_heart_segmentation.nii.gz` in the output directory, 
-along with several intermediate and quality-control files (e.g., ...`_sparse_volume.nii.gz`, ...`_qc_sax_backprojected.nii.gz`).
+**Output:** `subject-001_whole_heart_segmentation.nii.gz` — and nothing else. Add `-qc` /
+`--quality-control` to also write the diagnostic artefacts (`..._intermediate_sparse_volume.nii.gz`
+and the three `..._intermediate_qc_*_backprojected.nii.gz` files).
 
 ### 3. `cardioform full_pipeline`: The End-to-End Solution
 This is the main command that automates the entire process. 
@@ -162,6 +164,9 @@ inputs are remapped automatically before inference. Pass the raw output of
 * `-o, --output-dir`: Directory where the output files will be saved.
 * `-p, --output-prefix`: A name to prefix all output filenames.
 * `--device`: The device to run on. Defaults to `cpu`.
+* `-qc, --quality-control`: Also write the sparse volume, both back-projections, and the
+  remapped LAX inputs. Off by default; without it the remapped inputs go to a temporary
+  directory and are discarded.
 
 #### Example:
 ```bash
@@ -171,8 +176,8 @@ cardioform reconstruct_la \
     -o /path/to/outputs -p "subject-001"
 ```
 
-**Output:** `subject-001_la_3d_segmentation.nii.gz` plus the sparse volume, the two
-back-projection QC files, and the two remapped LAX inputs.
+**Output:** `subject-001_la_3d_segmentation.nii.gz`. With `-qc`, also the sparse volume,
+the two back-projection QC files, and the two remapped LAX inputs.
 
 ### 5. `cardioform left_complete`: Enhancing the whole heart with the left-side model
 

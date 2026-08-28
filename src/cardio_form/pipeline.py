@@ -102,9 +102,14 @@ class CardioForm:
         ch2_file_path: str, 
         ch4_file_path: str, 
         output_dir: str, 
-        output_prefix: str = None
+        output_prefix: str = None,
+        quality_control: bool = False,
     ) -> dict:
-        """Runs ONLY the 3D reconstruction step of the pipeline."""
+        """Runs ONLY the 3D reconstruction step of the pipeline.
+
+        Set ``quality_control`` to also write the sparse volume and the three
+        back-projections. Off by default: nothing downstream reads them.
+        """
         
         logger.info(f"--- Starting 3D Reconstruction for {output_prefix} ---")
 
@@ -117,7 +122,8 @@ class CardioForm:
             output_dir=output_dir,
             output_prefix=output_prefix,
             model=self.recon_model, # Accessing the property, not the _variable
-            device_str=self.device
+            device_str=self.device,
+            compute_qc=quality_control
         )
         
         logger.info(f"Reconstruction for {output_prefix} complete.")
@@ -159,9 +165,13 @@ class CardioForm:
         )
         return output_path
     
-    def reconstruct_la_3d(self, ch2_file: str, ch4_file: str, output_dir: str, output_prefix: str) -> dict : 
+    def reconstruct_la_3d(self, ch2_file: str, ch4_file: str, output_dir: str, output_prefix: str,
+                          quality_control: bool = False) -> dict : 
         """ 
         Runs ONLY the LA 3D reconstruction step of the pipeline. 
+
+        Set ``quality_control`` to also write the sparse volume and both
+        back-projections.
         """ 
         logger.info(f"--- Starting LA 3D Reconstruction for {output_prefix} ---") 
 
@@ -172,7 +182,7 @@ class CardioForm:
             output_dir=output_dir,
             output_prefix=output_prefix,
             device_str=self.device,
-            compute_bp=True
+            compute_qc=quality_control
         ) 
 
         logger.info(f"LA 3D Reconstruction for {output_prefix} complete.") 
@@ -233,6 +243,7 @@ class CardioForm:
         ch4_path: str,
         output_dir: str,
         output_prefix: str,
+        quality_control: bool = False,
     ):
         """
         Runs the full end-to-end pipeline for a single subject.
@@ -287,7 +298,8 @@ class CardioForm:
             ch2_file_path=lax2ch_seg_path,
             ch4_file_path=lax4ch_seg_path,
             output_dir=output_dir, # The main output goes in the top-level subject folder
-            output_prefix=output_prefix
+            output_prefix=output_prefix,
+            quality_control=quality_control
         )
 
         logger.info(f"\n===== Full Pipeline for {output_prefix} Complete! =====")

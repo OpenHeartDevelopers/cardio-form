@@ -40,7 +40,7 @@ def _resolve_view(view_name, explicit_path, input_dir, pattern, flag_hint):
 
 
 def run_full_pipeline_job(output_dir, output_prefix, device='cpu',
-                          input_dir=None, sax_path=None, ch2_path=None, ch4_path=None):
+                          input_dir=None, sax_path=None, ch2_path=None, ch4_path=None, quality_control=False):
     """
     Pure Python function to run the full pipeline.
     Accepts standard types, not argparse objects.
@@ -66,6 +66,7 @@ def run_full_pipeline_job(output_dir, output_prefix, device='cpu',
             ch4_path=ch4_path,
             output_dir=output_dir,
             output_prefix=output_prefix,
+            quality_control=quality_control,
         )
         logger.info("\n--- Full pipeline job finished successfully! ---")
         return True
@@ -86,7 +87,8 @@ def main(args):
             ch4_path=args.ch4_file,
             output_dir=args.output_dir,
             output_prefix=args.output_prefix,
-            device=args.device
+            device=args.device,
+            quality_control=args.quality_control
         )
     except Exception:
         sys.exit(1)
@@ -105,5 +107,7 @@ if __name__ == "__main__":
     parser.add_argument("-p", "--output-prefix", required=True, help="Prefix for all output filenames (inferred if not provided).")
     parser.add_argument("--device", default="cpu", choices=['auto', 'cpu', 'cuda'], help="Device to run the models on.")
     
+    parser.add_argument("-qc", "--quality-control", action="store_true", help="Also write diagnostic artefacts (sparse volume, back-projections).")
+
     args = parser.parse_args()
     main(args) 

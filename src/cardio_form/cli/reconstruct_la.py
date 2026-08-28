@@ -44,12 +44,22 @@ def _remap_lax_input(input_path, output_path, mapping, allowed_labels, view):
     return output_path
 
 
-def run_la_reconstruction_job(ch2_file, ch4_file, output_dir, output_prefix, device='cpu'):
+def run_la_reconstruction_job(ch2_file, ch4_file, output_dir, output_prefix, device='cpu',
+                              quality_control=False):
     """
     Pure Python function to run the LA 3D reconstruction. 
     Accepts standard types, not argparse objects.
+
+    The LAX inputs must be remapped into the LA network's label space before
+    inference. ``run_la_reconstruction`` takes paths, so the remapped volumes
+    have to exist on disk; when ``quality_control`` is off they go to a
+    temporary directory and are removed afterwards.
     """
     # Imported here, not at module scope: pulls in torch/nnunetv2 (~3.5s).
+    import contextlib
+    import os
+    import tempfile
+
     from cardio_form.pipeline import CardioForm
     from cardio_form.output_managers import OutputManager
     logger.info("--- Initializing CardioForm Pipeline ---")
@@ -57,24 +67,33 @@ def run_la_reconstruction_job(ch2_file, ch4_file, output_dir, output_prefix, dev
     try:
         outputs = OutputManager(output_dir=output_dir, output_prefix=output_prefix)
 
-        ch2_mapped = _remap_lax_input(
-            ch2_file, outputs.get_path('la_input_2ch'),
-            LA_MAP_2CH, RAW_LAX_LABELS_2CH, '2CH',
-        )
-        ch4_mapped = _remap_lax_input(
-            ch4_file, outputs.get_path('la_input_4ch'),
-            LA_MAP_4CH, RAW_LAX_LABELS_4CH, '4CH',
-        )
+        # Keep the remapped inputs only when they were asked for.
+        with contextlib.ExitStack() as stack:
+            if quality_control:
+                ch2_target = outputs.get_path('la_input_2ch')
+                ch4_target = outputs.get_path('la_input_4ch')
+            else:
+                scratch = stack.enter_context(tempfile.TemporaryDirectory(prefix='cardioform_la_'))
+                ch2_target = os.path.join(scratch, 'la_input_2ch.nii.gz')
+                ch4_target = os.path.join(scratch, 'la_input_4ch.nii.gz')
 
-        pipeline = CardioForm(device=device)
-        
-        # Call the high-level method from our pipeline class.
-        pipeline.reconstruct_la_3d(
-            ch2_file=ch2_mapped,
-            ch4_file=ch4_mapped,
-            output_dir=output_dir,
-            output_prefix=output_prefix
-        )
+            ch2_mapped = _remap_lax_input(
+                ch2_file, ch2_target, LA_MAP_2CH, RAW_LAX_LABELS_2CH, '2CH',
+            )
+            ch4_mapped = _remap_lax_input(
+                ch4_file, ch4_target, LA_MAP_4CH, RAW_LAX_LABELS_4CH, '4CH',
+            )
+
+            pipeline = CardioForm(device=device)
+
+            # Call the high-level method from our pipeline class.
+            pipeline.reconstruct_la_3d(
+                ch2_file=ch2_mapped,
+                ch4_file=ch4_mapped,
+                output_dir=output_dir,
+                output_prefix=output_prefix,
+                quality_control=quality_control,
+            )
         logger.info("\n--- LA 3D Reconstruction job finished successfully! ---")
         return True
         
@@ -92,7 +111,8 @@ def main(args):
             ch4_file=args.ch4_file,
             output_dir=args.output_dir,
             output_prefix=args.output_prefix,
-            device=args.device
+            device=args.device,
+            quality_control=args.quality_control
         )
     except Exception:
         sys.exit(1)
@@ -114,6 +134,7 @@ if __name__ == "__main__":
     # --- Configuration Arguments ---
     parser.add_argument("--model-version", default="default", help="Version of the LA reconstruction model to use (from models.yaml).")
     parser.add_argument("--device", default="cpu", choices=['cpu', 'cuda'], help="Device to run the model on.")
+    parser.add_argument("-qc", "--quality-control", action="store_true", help="Also write diagnostic artefacts (sparse volume, back-projections, remapped inputs).")
     
     args = parser.parse_args()
     main(args)

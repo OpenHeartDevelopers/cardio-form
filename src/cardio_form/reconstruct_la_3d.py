@@ -360,7 +360,7 @@ def run_la_reconstruction(
     output_dir: str,
     output_prefix: str,
     device_str: str = 'cpu',
-    compute_bp: bool = True
+    compute_qc: bool = False
 ) -> dict:
     """
     Runs the LA-specific 3D reconstruction from 2CH and 4CH views.
@@ -383,21 +383,22 @@ def run_la_reconstruction(
     # --- Save the outputs using our manager ---
     # These keys must be added to the OutputManager config
     path_la_prediction = outputs.get_path('la_prediction')
-    path_la_sparse_volume = outputs.get_path('la_sparse_volume')
-    path_la_ch2_bp = outputs.get_path('la_ch2_bp')
-    path_la_ch4_bp = outputs.get_path('la_ch4_bp')
-    
     nib.save(nif_prd, path_la_prediction)
-    nib.save(nif_sp, path_la_sparse_volume)
-    
-    if compute_bp:
+
+    output_dict = {'la_prediction': path_la_prediction}
+
+    if compute_qc:
+        path_la_sparse_volume = outputs.get_path('la_sparse_volume')
+        path_la_ch2_bp = outputs.get_path('la_ch2_bp')
+        path_la_ch4_bp = outputs.get_path('la_ch4_bp')
+
+        nib.save(nif_sp, path_la_sparse_volume)
         nib.save(nif_prd_bp_2ch, path_la_ch2_bp)
         nib.save(nif_prd_bp_4ch, path_la_ch4_bp)
 
+        output_dict['la_sparse_volume'] = path_la_sparse_volume
+        output_dict['la_ch2_bp'] = path_la_ch2_bp
+        output_dict['la_ch4_bp'] = path_la_ch4_bp
+
     logger.info("LA Reconstruction complete!")
-    return {
-        'la_prediction': path_la_prediction,
-        'la_sparse_volume': path_la_sparse_volume,
-        'la_ch2_bp': path_la_ch2_bp if compute_bp else '',
-        'la_ch4_bp': path_la_ch4_bp if compute_bp else ''
-    }
+    return output_dict

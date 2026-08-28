@@ -27,7 +27,6 @@ class OutputManager:
         self._config = {
             # --- Final Reconstruction Outputs ---
             'prediction': '_whole_heart_segmentation.nii.gz',
-            'prediction_canonical': '_whole_heart_segmentation_canonical.nii.gz',
 
             # --- Intermediate Segmentation Outputs ---
             'seg_sax': '_2D_seg_sax.nii.gz',

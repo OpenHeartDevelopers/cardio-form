@@ -130,7 +130,7 @@ def load_model(model_file: str, device_str: str = 'cpu') -> nn.Module:
     return unet
 
 def run_3d_reconstruction(model, sax_file, ch2_file, ch4_file, output_dir, 
-                         output_prefix, device_str='cpu', compute_bp=True):
+                         output_prefix, device_str='cpu', compute_qc=False):
     """
     Run 3D reconstruction from SAX, 2CH, and 4CH NIfTI files.
     
@@ -138,8 +138,7 @@ def run_3d_reconstruction(model, sax_file, ch2_file, ch4_file, output_dir,
     1. Loads 2D segmentation data from input NIfTI files
     2. Projects 2D slices into a sparse 3D volume (oblique coordinate system)
     3. Runs 3D U-Net to densify the segmentation
-    4. Resamples output to canonical LPS orientation for viewer compatibility
-    5. Optionally back-projects 3D result to 2D slices for validation
+    4. Optionally back-projects the 3D result to 2D slices for validation
     
     Parameters:
     -----------
@@ -157,8 +156,9 @@ def run_3d_reconstruction(model, sax_file, ch2_file, ch4_file, output_dir,
         Prefix for all output filenames (e.g., 'subject_001')
     device_str : str, optional
         'cpu' or 'cuda' (default: 'cpu')
-    compute_bp : bool, optional
-        Whether to compute back-projections (default: True)
+    compute_qc : bool, optional
+        Whether to write diagnostic artefacts: the sparse volume and the three
+        back-projections (default: False)
     
     Returns:
     --------
@@ -167,10 +167,9 @@ def run_3d_reconstruction(model, sax_file, ch2_file, ch4_file, output_dir,
     
     Notes:
     ------
-    - The intermediate sparse_volume.nii.gz uses oblique coordinates (mathematically correct)
-    - Back-projections use oblique geometry to ensure geometric consistency
-    - Only the final whole_heart_segmentation.nii.gz is resampled to LPS
-    - An additional *_prediction_oblique.nii.gz file is saved for debugging
+    - The output uses oblique coordinates (the reconstruction's native grid)
+    - Back-projections use the same oblique geometry, for consistency
+    - Diagnostic artefacts are only written when compute_qc is True
     """
     
     if device_str not in ['cpu', 'cuda']:
@@ -222,8 +221,9 @@ def run_3d_reconstruction(model, sax_file, ch2_file, ch4_file, output_dir,
         logger.info(f"Affine determinant: {det:.4f} (right-handed system)")
     
     # Save sparse volume in original oblique coordinates
-    vol_sp_nif = nib.Nifti1Image(vol_sp, affine=affine_3d)
-    nib.save(vol_sp_nif, outputs.get_path('sparse_volume'))
+    if compute_qc:
+        vol_sp_nif = nib.Nifti1Image(vol_sp, affine=affine_3d)
+        nib.save(vol_sp_nif, outputs.get_path('sparse_volume'))
     
     # ========================================================================
     # STEP 3: Run 3D U-Net prediction
@@ -259,27 +259,20 @@ def run_3d_reconstruction(model, sax_file, ch2_file, ch4_file, output_dir,
     oblique_nii = nib.Nifti1Image(lab_transposed.astype(np.uint8), affine=affine_3d)
     
     # ========================================================================
-    # STEP 4: Resample to canonical LPS orientation
+    # STEP 4: Save the segmentation
     # ========================================================================
-    logger.info("Resampling to canonical LPS orientation...")
-    
-    canonical_nii = geometry.resample_to_lps(oblique_nii)
-    path_canonical = outputs.get_path('prediction_canonical')
-    # Save both versions
-    nib.save(canonical_nii, path_canonical)
-    
-    # Save oblique version for debugging/validation
-    path_oblique = outputs.get_path('prediction') #.replace('.nii.gz', '_oblique.nii.gz')
+    path_oblique = outputs.get_path('prediction')
     nib.save(oblique_nii, path_oblique)
-    logger.info(f"Saved canonical LPS output: {path_canonical}")
-    logger.info(f"Saved oblique output for reference: {path_oblique}")
-    
+    logger.info(f"Saved whole-heart segmentation: {path_oblique}")
+
+    output_dict = {'prediction': path_oblique}
+    if compute_qc:
+        output_dict['sparse_volume'] = outputs.get_path('sparse_volume')
+
     # ========================================================================
     # STEP 5: Back-projection (optional, uses oblique geometry)
     # ========================================================================
-    output_dict = outputs.get_all_paths()
-    
-    if compute_bp:
+    if compute_qc:
         logger.info("Computing back-projections...")
         
         # Back-project using OBLIQUE geometry (not LPS!)
@@ -290,7 +283,7 @@ def run_3d_reconstruction(model, sax_file, ch2_file, ch4_file, output_dir,
             sax_ipp, sax_ipo, sax_pxs, sax_lab,
             ch2_ipp, ch2_ipo, ch2_pxs, ch2_lab,
             ch4_ipp, ch4_ipo, ch4_pxs, ch4_lab,
-            lab_transposed  # Use oblique prediction, not canonical!
+            lab_transposed
         )
         
         # Save back-projections
@@ -300,10 +293,9 @@ def run_3d_reconstruction(model, sax_file, ch2_file, ch4_file, output_dir,
                 outputs.get_path('ch4_bp'))
         nib.save(nib.Nifti1Image(sax_bp, affine=sax_affine), 
                 outputs.get_path('sax_bp'))
-    else:
-        output_dict['ch2_bp'] = ''
-        output_dict['ch4_bp'] = ''
-        output_dict['sax_bp'] = ''
+
+        for key in ('ch2_bp', 'ch4_bp', 'sax_bp'):
+            output_dict[key] = outputs.get_path(key)
     
     logger.info("Reconstruction complete!")
     return output_dict

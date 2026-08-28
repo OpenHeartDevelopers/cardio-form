@@ -6,7 +6,8 @@ from cardio_form.utils import configure_logging
 # Create a module-level logger
 logger = configure_logging('ScriptReconstruct3D')
 
-def run_reconstruction_job(sax_path, ch2_path, ch4_path, output_dir, output_prefix, device='cpu'):
+def run_reconstruction_job(sax_path, ch2_path, ch4_path, output_dir, output_prefix, device='cpu',
+                           quality_control=False):
     """
     Pure Python function to run the reconstruction. 
     Accepts standard types, not argparse objects.
@@ -24,7 +25,8 @@ def run_reconstruction_job(sax_path, ch2_path, ch4_path, output_dir, output_pref
             ch2_file_path=ch2_path,
             ch4_file_path=ch4_path,
             output_dir=output_dir,
-            output_prefix=output_prefix
+            output_prefix=output_prefix,
+            quality_control=quality_control
         )
         logger.info("\n--- Reconstruction job finished successfully! ---")
         return True
@@ -45,7 +47,8 @@ def main(args):
             ch4_path=args.ch4_file,
             output_dir=args.output_dir,
             output_prefix=args.output_prefix,
-            device=args.device
+            device=args.device,
+            quality_control=args.quality_control
         )
     except Exception:
         sys.exit(1)
@@ -68,5 +71,7 @@ if __name__ == "__main__":
     # --- Configuration Arguments ---
     parser.add_argument("--device", default="cpu", choices=['cpu', 'cuda'], help="Device to use.")
     
+    parser.add_argument("-qc", "--quality-control", action="store_true", help="Also write diagnostic artefacts (sparse volume, back-projections).")
+
     args = parser.parse_args()
     main(args)

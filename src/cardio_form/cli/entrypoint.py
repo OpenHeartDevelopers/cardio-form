@@ -35,7 +35,8 @@ def run(args):
             ch4_path=args.ch4_file,
             output_dir=args.output_dir,
             output_prefix=args.output_prefix,
-            device=args.device
+            device=args.device,
+            quality_control=args.quality_control
         )
     elif mode == 'segment':
         from cardio_form.cli.segment import run_segmentation_job
@@ -55,7 +56,8 @@ def run(args):
             ch4_path=args.ch4_file,
             output_dir=args.output_dir,
             output_prefix=args.output_prefix,
-            device=args.device
+            device=args.device,
+            quality_control=args.quality_control
         )
 
     elif mode == 'reconstruct_la':
@@ -65,7 +67,8 @@ def run(args):
             ch4_file=args.ch4_file,
             output_dir=args.output_dir,
             output_prefix=args.output_prefix,
-            device=args.device
+            device=args.device,
+            quality_control=args.quality_control
         )
     elif mode == 'left_complete':
         from cardio_form.cli.left_complete import run_left_complete_job, SELECTION_GROUPS
@@ -137,6 +140,7 @@ def main():
     reconstruct_parser.add_argument("-sax", "--sax-file", required=True, help="Path to SAX NIfTI.")
     reconstruct_parser.add_argument("-ch2", "--ch2-file", required=True, help="Path to 2CH NIfTI.")
     reconstruct_parser.add_argument("-ch4", "--ch4-file", required=True, help="Path to 4CH NIfTI.")
+    reconstruct_parser.add_argument("-qc", "--quality-control", action="store_true", help="Also write diagnostic artefacts (sparse volume, back-projections, remapped inputs).")
 
     # --- Parser for the segmentation mode ---
     segment_parser = subparsers.add_parser('segment', parents=[ml_parent_parser], help='Run 2D segmentation on a cardiac MRI NIfTI file.')
@@ -149,6 +153,7 @@ def main():
     full_pipeline_parser.add_argument("-sax", "--sax-file", default=None, help="Path to SAX NIfTI (overrides discovery from --input-dir).")
     full_pipeline_parser.add_argument("-ch2", "--ch2-file", default=None, help="Path to 2CH NIfTI (overrides discovery from --input-dir).")
     full_pipeline_parser.add_argument("-ch4", "--ch4-file", default=None, help="Path to 4CH NIfTI (overrides discovery from --input-dir).")
+    full_pipeline_parser.add_argument("-qc", "--quality-control", action="store_true", help="Also write diagnostic artefacts (sparse volume, back-projections, remapped inputs).")
 
     # --- Parser for LA reconstruction mode ---
     la_reconstruct_parser = subparsers.add_parser('reconstruct_la', aliases=['la_3d'], help='Run LA 3D reconstruction from 2D segmentations.')
@@ -159,6 +164,7 @@ def main():
     la_reconstruct_parser.add_argument("-p", "--output-prefix", required=True, help="Prefix for all output filenames (e.g., 'subject_001_cine').")
     
     la_reconstruct_parser.add_argument("--device", default="cpu", choices=['cpu', 'cuda'], help="Device to run the model on.")
+    la_reconstruct_parser.add_argument("-qc", "--quality-control", action="store_true", help="Also write diagnostic artefacts (sparse volume, back-projections, remapped inputs).")
 
     # --- Parser for left-heart completion mode ---
     left_complete_parser = subparsers.add_parser('left_complete', aliases=['left-complete'], help="Enhance a whole-heart segmentation with the LA network's left-side output.")
