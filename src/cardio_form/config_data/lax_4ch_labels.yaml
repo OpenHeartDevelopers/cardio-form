@@ -1,0 +1,18 @@
+# ===========================================================================
+# nnUNet 2D LAX 4-chamber segmentation OUTPUT label space
+# ===========================================================================
+# What `cardioform segment --view-type lax_4ch` writes.
+# Proof: Dataset283_LAX4CH dataset.json.
+# ===========================================================================
+labels:
+  LV: 1    # left ventricle blood pool
+  Myo: 2   # myocardium
+  RV: 3    # right ventricle blood pool
+  LA: 4    # left atrium blood pool
+  RA: 5    # right atrium blood pool
+
+groups:
+  ventricles: [LV, RV]
+  atria: [LA, RA]
+  blood_pools: [LV, RV, LA, RA]
+  left_heart: [LV, Myo, LA]

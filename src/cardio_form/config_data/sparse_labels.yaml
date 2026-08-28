@@ -1,0 +1,18 @@
+# ===========================================================================
+# Sparse volume label space (input to the 3D whole-heart network)
+# ===========================================================================
+# Produced by geometry.vol_grid_gen from the three 2D segmentations, via the
+# px2vx lookup tables. Shares integers with the whole-heart OUTPUT space for
+# the structures it carries, but 4, 7 and 8 are never assigned on input.
+# ===========================================================================
+labels:
+  LV_bp: 1   # left ventricle blood pool
+  Myo: 2     # myocardium
+  RV_bp: 3   # right ventricle blood pool
+  LA_bp: 5   # left atrium blood pool
+  RA_bp: 6   # right atrium blood pool
+
+groups:
+  ventricles: [LV_bp, Myo, RV_bp]
+  atria: [LA_bp, RA_bp]
+  blood_pools: [LV_bp, RV_bp, LA_bp, RA_bp]

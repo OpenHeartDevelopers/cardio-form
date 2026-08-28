@@ -147,10 +147,72 @@ cardioform full_pipeline \
 **Output:** This will create a flat list of all files (intermediate segmentations and final reconstruction) in the 
 `/path/to/outputs/full_run/` directory, all prefixed with `subject-001_final`.
 
-### 4. `cardioform labels`: Editing segmentation labels
+### 4. `cardioform reconstruct_la`: Left-heart 3D reconstruction
+
+Runs a separate 3D network over the two long-axis segmentations. Despite the name it
+reconstructs the **left side** of the heart, not the atrium alone: it emits an LA body,
+two pulmonary-vein regions, and the LV base.
+
+The 2D LAX segmentations use a different label convention from this network, so the
+inputs are remapped automatically before inference. Pass the raw output of
+`cardioform segment`; the remapped files are written alongside as QC artefacts.
+
+#### Arguments:
+* `-ch2, --ch2-file` / `-ch4, --ch4-file`: The two LAX 2D segmentation NIfTI files.
+* `-o, --output-dir`: Directory where the output files will be saved.
+* `-p, --output-prefix`: A name to prefix all output filenames.
+* `--device`: The device to run on. Defaults to `cpu`.
+
+#### Example:
+```bash
+cardioform reconstruct_la \
+    -ch2 /path/to/outputs/subject-001_2D_seg_lax_2ch.nii.gz \
+    -ch4 /path/to/outputs/subject-001_2D_seg_lax_4ch.nii.gz \
+    -o /path/to/outputs -p "subject-001"
+```
+
+**Output:** `subject-001_la_3d_segmentation.nii.gz` plus the sparse volume, the two
+back-projection QC files, and the two remapped LAX inputs.
+
+### 5. `cardioform left_complete`: Enhancing the whole heart with the left-side model
+
+Folds the `reconstruct_la` output into a whole-heart segmentation. The left-side volume
+is resampled onto the whole-heart grid and written **only where the whole-heart map is
+background**, so existing structure is never overwritten and the LA-LV connection is
+preserved.
+
+#### Arguments:
+* `-la, --la-file`: An existing LA 3D segmentation. Overrides `-ch2`/`-ch4`.
+* `-ch2, --ch2-file` / `-ch4, --ch4-file`: LAX segmentations, used to run the LA
+  reconstruction first when `-la` is absent.
+* `-whs, --whs-file`: The whole-heart segmentation to enhance.
+* `-o, --output-dir` / `-p, --output-prefix`: Output location and prefix.
+* `--include-la`, `--include-lv`, `--include-veins`: Restrict which structures are
+  merged. No flag merges everything; flags given are combined.
+
+#### Example:
+```bash
+# Skip the poorly-resolved vein classes
+cardioform left_complete \
+    -la  /path/to/outputs/subject-001_la_3d_segmentation.nii.gz \
+    -whs /path/to/outputs/subject-001_whole_heart_segmentation.nii.gz \
+    -o /path/to/outputs -p "subject-001" \
+    --include-la --include-lv
+```
+
+**Output:** `subject-001_left_complete_segmentation.nii.gz`, on the same grid as the
+input whole-heart file.
+
+### 6. `cardioform labels`: Editing segmentation labels
 
 Filter, merge, or remap labels in a segmentation NIfTI. Labels may be given by name,
-group (from `labels.yaml`), or integer.
+group, or integer.
+
+> **Every stage uses a different label space.** On the 2D segmentation outputs `1` is
+> blood pool and `2` is myocardium — the *opposite* of the whole-heart output. Pass
+> `--label-space` to name the space your input uses: `whole_heart` (default), `sax`,
+> `lax_2ch`, `lax_4ch`, `sparse`, or `left`. The manifests live in
+> `src/cardio_form/config_data/`.
 
 ```bash
 # Keep only the ventricles group and the aorta
@@ -161,4 +223,7 @@ cardioform labels merge   -i seg.nii.gz -o merged.nii.gz   -l ventricles -v 1
 
 # Remap individual labels with OLD:NEW pairs (names or integers)
 cardioform labels relabel -i seg.nii.gz -o relabeled.nii.gz -m MYO_septum:LV_myo 7:0
+
+# Operate on a 2D LAX 4CH segmentation, where LA is 4 (not 5)
+cardioform labels filter -i seg_lax_4ch.nii.gz -o la_only.nii.gz -l LA --label-space lax_4ch
 ```

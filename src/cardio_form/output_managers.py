@@ -41,10 +41,16 @@ class OutputManager:
             'ch4_bp': '_intermediate_qc_ch4_backprojected.nii.gz',
 
             # -- LA Reconstruction 3D specific outputs ---
+            # Inputs remapped into the LA network's label space (QC artefacts).
+            'la_input_2ch': '_intermediate_la_3d_input_2ch.nii.gz',
+            'la_input_4ch': '_intermediate_la_3d_input_4ch.nii.gz',
             'la_prediction': '_la_3d_segmentation.nii.gz',
             'la_sparse_volume': '_la_3d_sparse_volume.nii.gz',
             'la_ch2_bp': '_intermediate_la_3d_qc_ch2_backprojected.nii.gz',
             'la_ch4_bp': '_intermediate_la_3d_qc_ch4_backprojected.nii.gz',
+
+            # --- Left-heart completion output ---
+            'left_complete': '_left_complete_segmentation.nii.gz',
         }
 
     def get_path(self, key: str) -> str:

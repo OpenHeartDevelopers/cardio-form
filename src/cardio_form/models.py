@@ -7,7 +7,7 @@ from pathlib import Path
 from tqdm import tqdm
 
 from cardio_form.utils import configure_logging
-from cardio_form.config import config_path
+from cardio_form.config import config_path, dev_root
 logger = configure_logging(__name__)
 
 # --- Helper for TQDM progress bar ---
@@ -86,9 +86,9 @@ class ModelManager:
         
         # --- Handle local files directly ---
         if url.startswith("file://"):
-            # We construct the path relative to the project root for consistency
-            project_root = self.manifest_path.parent
-            local_path = project_root / url[7:]
+            # Dev weights are written relative to the repo root, not to the
+            # manifest's own directory (the manifest now ships inside the package).
+            local_path = dev_root() / url[7:]
             if not local_path.exists():
                 raise FileNotFoundError(f"Local model file not found: {local_path}")
             return str(local_path.resolve())

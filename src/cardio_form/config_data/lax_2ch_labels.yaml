@@ -1,0 +1,14 @@
+# ===========================================================================
+# nnUNet 2D LAX 2-chamber segmentation OUTPUT label space
+# ===========================================================================
+# What `cardioform segment --view-type lax_2ch` writes.
+# Proof: Dataset282_LAX2CH dataset.json.
+# ===========================================================================
+labels:
+  LV: 1    # left ventricle blood pool
+  Myo: 2   # myocardium
+  LA: 3    # left atrium blood pool
+
+groups:
+  blood_pools: [LV, LA]
+  left_heart: [LV, Myo, LA]

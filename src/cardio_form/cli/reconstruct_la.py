@@ -4,6 +4,46 @@ import argparse
 from cardio_form.utils import configure_logging
 logger = configure_logging('ScriptReconstructLA3D')
 
+# The 2D LAX segmentation models and the LA 3D network use different label
+# spaces. These map the former onto the latter, giving 1=LA, 2=LV, 3=RA, 4=RV.
+# Ported from the upstream pipeline's LA_2CH/LA_4CH_label_mapping.py.
+LA_MAP_2CH = {1: 2, 2: 0, 3: 1}
+LA_MAP_4CH = {1: 2, 2: 0, 3: 4, 4: 1, 5: 3}
+
+# Label values the 2D LAX models can emit. Anything else is not a LAX
+# segmentation in the expected space.
+RAW_LAX_LABELS_2CH = {0, 1, 2, 3}
+RAW_LAX_LABELS_4CH = {0, 1, 2, 3, 4, 5}
+
+
+def _remap_lax_input(input_path, output_path, mapping, allowed_labels, view):
+    """Remap one LAX segmentation into the LA network's label space.
+
+    Returns the path of the written file.
+    """
+    import numpy as np
+
+    from cardio_form import geometry
+    from cardio_form import io as cf_io
+
+    data, affine, header = cf_io.load_label_map(input_path)
+
+    present = set(np.unique(data).astype(int).tolist())
+    unexpected = present - allowed_labels
+    if unexpected:
+        raise ValueError(
+            f"{view} input '{input_path}' contains label(s) {sorted(unexpected)}, "
+            f"which are outside the expected 2D LAX label space {sorted(allowed_labels)}. "
+            f"Pass the raw output of `cardioform segment --view-type lax_{view.lower()}`; "
+            f"an already-remapped or unrelated file will not reconstruct correctly."
+        )
+
+    logger.info(f"Remapping {view} input into the LA network label space.")
+    remapped = geometry.remap_labels(data, mapping)
+    cf_io.save_nifti(remapped, affine, header, output_path)
+    return output_path
+
+
 def run_la_reconstruction_job(ch2_file, ch4_file, output_dir, output_prefix, device='cpu'):
     """
     Pure Python function to run the LA 3D reconstruction. 
@@ -11,15 +51,27 @@ def run_la_reconstruction_job(ch2_file, ch4_file, output_dir, output_prefix, dev
     """
     # Imported here, not at module scope: pulls in torch/nnunetv2 (~3.5s).
     from cardio_form.pipeline import CardioForm
+    from cardio_form.output_managers import OutputManager
     logger.info("--- Initializing CardioForm Pipeline ---")
     
     try:
+        outputs = OutputManager(output_dir=output_dir, output_prefix=output_prefix)
+
+        ch2_mapped = _remap_lax_input(
+            ch2_file, outputs.get_path('la_input_2ch'),
+            LA_MAP_2CH, RAW_LAX_LABELS_2CH, '2CH',
+        )
+        ch4_mapped = _remap_lax_input(
+            ch4_file, outputs.get_path('la_input_4ch'),
+            LA_MAP_4CH, RAW_LAX_LABELS_4CH, '4CH',
+        )
+
         pipeline = CardioForm(device=device)
         
         # Call the high-level method from our pipeline class.
         pipeline.reconstruct_la_3d(
-            ch2_file=ch2_file,
-            ch4_file=ch4_file,
+            ch2_file=ch2_mapped,
+            ch4_file=ch4_mapped,
             output_dir=output_dir,
             output_prefix=output_prefix
         )

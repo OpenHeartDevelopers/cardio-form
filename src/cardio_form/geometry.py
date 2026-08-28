@@ -885,3 +885,69 @@ def remap_labels(data: np.ndarray, mapping: dict) -> np.ndarray:
         remapped_data[data == old_value] = new_value
 
     return remapped_data
+
+
+## left-heart completion helpers
+
+
+def resample_label_map_to(
+    source_nifti: nib.Nifti1Image, target_shape: tuple, target_affine: np.ndarray
+) -> np.ndarray:
+    """
+    Resample a label map onto another volume's grid.
+
+    Pure transform: takes a NIfTI image and the geometry of the target grid, and
+    returns the resampled label array. Nearest-neighbour only (``order=0``);
+    any interpolation would invent label values that do not exist.
+
+    Args:
+        source_nifti (nib.Nifti1Image): Label map to resample.
+        target_shape (tuple): Shape of the target grid.
+        target_affine (np.ndarray): 4x4 affine of the target grid.
+
+    Returns:
+        np.ndarray: Resampled labels on the target grid, integer dtype.
+    """
+    from nibabel.processing import resample_from_to
+
+    logger.info(f"Resampling {source_nifti.shape} -> {tuple(target_shape)} (nearest neighbour)")
+    resampled = resample_from_to(
+        source_nifti, (tuple(target_shape), target_affine), order=0, cval=0
+    )
+    return np.asanyarray(resampled.dataobj).astype(np.uint8)
+
+
+def fill_into_background(
+    base: np.ndarray, addition: np.ndarray, mapping: dict
+) -> np.ndarray:
+    """
+    Add labels from ``addition`` into ``base``, but only where ``base`` is 0.
+
+    Pure transform. Voxels already carrying a label in ``base`` are never
+    modified, so the result can only gain structure, never lose or move it.
+    Labels of ``addition`` that are absent from ``mapping`` are ignored.
+
+    Args:
+        base (np.ndarray): Segmentation to enhance.
+        addition (np.ndarray): Label map on the same grid as ``base``.
+        mapping (dict): ``{addition_label: base_label}`` integer mapping.
+
+    Returns:
+        np.ndarray: ``base`` with the mapped structures filled into background.
+    """
+    if base.shape != addition.shape:
+        raise ValueError(
+            f"Shape mismatch: base {base.shape} vs addition {addition.shape}. "
+            f"Resample the addition onto the base grid first."
+        )
+
+    logger.info(f"Filling into background with mapping: {mapping}")
+
+    filled = base.copy()
+    background = base == 0
+    for source_label, target_label in mapping.items():
+        writable = background & (addition == source_label)
+        filled[writable] = target_label
+        logger.info(f"  label {source_label} -> {target_label}: {int(writable.sum())} voxels added")
+
+    return filled

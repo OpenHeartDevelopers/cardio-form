@@ -1,0 +1,33 @@
+# ===========================================================================
+# CardioForm Left-Heart Completion Labels
+# ===========================================================================
+# Output label space of the LA 3D reconstruction network
+# (ReconstructLaUNet3d, out_channel=6 -> classes 0..5).
+#
+# WARNING: this legend was established by visual inspection of a SINGLE case
+# (2026-08-28). It is not confirmed across cases and may not be stable. Correct
+# it here; no other file encodes these values.
+#
+# The network is misnamed upstream and here: it completes the left side of the
+# heart (atrium AND ventricle base), not the atrium alone.
+# ===========================================================================
+
+labels:
+  LA_body: 1      # left atrial body; the reliable class
+  PV_left: 2      # where the left pulmonary vein would be; small, not vein-like
+  PV_right: 3     # where the right pulmonary veins would be; small, not vein-like
+  unassigned_4: 4 # never populated in the observed case
+  LV_base: 5      # top / base of the left ventricle; largest class
+
+groups:
+  la: [LA_body]
+  lv: [LV_base]
+  veins: [PV_left, PV_right]
+
+# Mapping into the whole-heart output space (labels.yaml), by name.
+# A label with no entry here is dropped by the merge.
+merge_into:
+  LA_body: LA_bp
+  LV_base: LV_bp
+  PV_left: PV_left
+  PV_right: PV_right

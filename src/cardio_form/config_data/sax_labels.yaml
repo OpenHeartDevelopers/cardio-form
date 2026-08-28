@@ -1,0 +1,15 @@
+# ===========================================================================
+# nnUNet 2D SAX segmentation OUTPUT label space
+# ===========================================================================
+# What `cardioform segment --view-type sax` writes.
+# NOTE the ordering: 1 is blood pool and 2 is myocardium here, the OPPOSITE of
+# the whole-heart output space. Proof: Dataset314_SAXUKBB dataset.json.
+# ===========================================================================
+labels:
+  LV: 1    # left ventricle blood pool
+  Myo: 2   # myocardium
+  RV: 3    # right ventricle blood pool
+
+groups:
+  ventricles: [LV, RV]
+  blood_pools: [LV, RV]

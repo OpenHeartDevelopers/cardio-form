@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cardio-form"
-version = "0.3.0"
+version = "0.4.0"
 description = "Whole-heart segmentation and 3D reconstruction from cardiac CINE MRI."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -24,3 +24,8 @@ cardioform = "cardio_form.cli.entrypoint:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+# The YAML manifests ship with the package so a plain `pip install`
+# can resolve them; see cardio_form/config.py.
+cardio_form = ["config_data/*.yaml"]

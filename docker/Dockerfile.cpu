@@ -36,8 +36,7 @@ RUN . /opt/conda/etc/profile.d/conda.sh && \
 # Copy the application code (src/ layout) and config manifests
 COPY pyproject.toml README.md ./
 COPY src/ ./src
-COPY models.yaml .
-COPY labels.yaml .
+# The YAML manifests ship inside the package (src/cardio_form/config_data/).
 
 # Install the shared pycemrg core (pinned, from PyPI) and CardioForm itself.
 # --no-deps keeps pip from re-resolving the conda-managed scientific stack.

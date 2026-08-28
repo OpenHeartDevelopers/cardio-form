@@ -178,6 +178,54 @@ class CardioForm:
         logger.info(f"LA 3D Reconstruction for {output_prefix} complete.") 
         return la_reconstruction_outputs
 
+    def left_complete(
+        self,
+        la_file: str,
+        whs_file: str,
+        output_dir: str,
+        output_prefix: str,
+        selected_groups=None,
+    ) -> str:
+        """
+        Enhance a whole-heart segmentation with the LA network's left-side output.
+
+        The LA volume is resampled onto the whole-heart grid and written only
+        where the whole-heart map is background, so existing structure is never
+        modified. Loads no model; pure geometry.
+
+        Args:
+            la_file (str): LA 3D segmentation NIfTI.
+            whs_file (str): Whole-heart segmentation NIfTI to enhance.
+            output_dir (str): Directory for the output file.
+            output_prefix (str): Prefix for the output filename.
+            selected_groups (list): Group names from the left label space to
+                merge. ``None`` merges every structure with a merge target.
+
+        Returns:
+            str: Path to the written segmentation.
+        """
+        from cardio_form import geometry
+        from cardio_form import io as cf_io
+        from cardio_form.cli.left_complete import build_merge_mapping
+        from cardio_form.output_managers import OutputManager
+
+        logger.info(f"--- Starting left-heart completion for {output_prefix} ---")
+
+        outputs = OutputManager(output_dir=output_dir, output_prefix=output_prefix)
+        mapping = build_merge_mapping(selected_groups)
+
+        whs_data, whs_affine, whs_header = cf_io.load_label_map(whs_file)
+        la_nifti = cf_io.load_nifti(la_file)
+
+        la_on_grid = geometry.resample_label_map_to(la_nifti, whs_data.shape, whs_affine)
+        completed = geometry.fill_into_background(whs_data, la_on_grid, mapping)
+
+        output_path = outputs.get_path('left_complete')
+        cf_io.save_nifti(completed, whs_affine, whs_header, output_path)
+
+        logger.info(f"Left-heart completion for {output_prefix} complete.")
+        return output_path
+
     def run_full_pipeline(
         self,
         sax_path: str,

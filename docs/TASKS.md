@@ -33,6 +33,18 @@ This document outlines the planned tasks for improving, refactoring, and finaliz
     -   **Plan:** Convert exact `==` pins to compatible ranges; capture reproducibility in a
         separate generated lockfile rather than the source-of-truth env files. See plan §Phase 3.
 
+### Priority 2.5: Left-heart integration (v0.4.0 — DONE)
+
+-   [x] **Fix the LA label-space bug.** `cli/reconstruct_la.py` now remaps the 2D LAX
+    segmentations into the LA network's space before inference. Without it the network
+    reconstructed the LV. Mappings ported from the upstream `LA_*_label_mapping.py`.
+-   [x] **`cardioform left_complete`.** Merges the left-heart output into the whole-heart
+    segmentation, filling into background only.
+-   [x] **Named label spaces.** Six manifests in `src/cardio_form/config_data/`, registered
+    in `config.LABEL_SPACES`, selectable with `cardioform labels --label-space`.
+-   [x] **Config manifests packaged.** Moved inside the package with `package-data`, so a
+    plain `pip install` resolves them. `file://` dev weights resolve via `config.dev_root()`.
+
 ### Priority 1: Restore Core Functionality
 
 -   [ ] **Fix the GPU Docker Image Build Failure**

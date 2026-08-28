@@ -1,9 +1,9 @@
 # ===========================================================================
-# CardioForm Label Definitions
+# Whole-heart 3D network OUTPUT label space
 # ===========================================================================
-# This file is the single source of truth for all segmentation labels.
-# It maps human-readable names to their corresponding integer values.
-# It also allows grouping labels for convenience.
+# What `cardioform reconstruct` writes. This is ONE of several label spaces;
+# see cardio_form/config.py LABEL_SPACES. The 2D segmentation outputs use a
+# DIFFERENT convention (there 1 is blood pool and 2 is myocardium).
 # ===========================================================================
 
 # --- Individual Label Definitions ---
@@ -12,11 +12,14 @@ labels:
   LV_myo: 1   # Left Ventricle Myocardium
   LV_bp: 2    # Left Ventricle Blood Pool
   RV_bp: 3    # Right Ventricle Blood Pool
-  MYO_septum: 4 # Label 4 is problematic and often merged or deleted. We'll give it a name.
+  MYO_septum: 4 # UNVERIFIED. Upstream QC calls this 'Aorta'; neither source is
+                # authoritative. Problematic, often merged or deleted.
   LA_bp: 5    # Left Atrium Blood Pool
   RA_bp: 6    # Right Atrium Blood Pool
-  Ao: 7       # Aorta
+  Ao: 7       # UNVERIFIED. Upstream QC calls this 'Aorta/PA'.
   PA: 8       # Pulmonary Artery
+  PV_left: 9   # Left pulmonary vein, from the left-heart completion
+  PV_right: 10 # Right pulmonary veins, from the left-heart completion
 
 # --- Group Definitions ---
 # These are convenient collections of labels for common tasks.

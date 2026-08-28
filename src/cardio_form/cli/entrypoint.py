@@ -1,6 +1,6 @@
 import argparse
 
-from cardio_form.config import CHOICES_VIEW_TYPE
+from cardio_form.config import CHOICES_VIEW_TYPE, DEFAULT_LABEL_SPACE, LABEL_SPACES
 from cardio_form.utils import configure_logging
 logger = configure_logging('Docker')
 
@@ -14,6 +14,7 @@ MODE_ALIASES = {
     '3d': 'reconstruct',
     'la_3d': 'reconstruct_la',
     'full': 'full_pipeline',
+    'left-complete': 'left_complete',
 }
 
 def run(args):
@@ -66,6 +67,20 @@ def run(args):
             output_prefix=args.output_prefix,
             device=args.device
         )
+    elif mode == 'left_complete':
+        from cardio_form.cli.left_complete import run_left_complete_job, SELECTION_GROUPS
+        selected = [group for flag, group in SELECTION_GROUPS.items()
+                    if getattr(args, flag, False)]
+        run_left_complete_job(
+            whs_file=args.whs_file,
+            output_dir=args.output_dir,
+            output_prefix=args.output_prefix,
+            la_file=args.la_file,
+            ch2_file=args.ch2_file,
+            ch4_file=args.ch4_file,
+            device=args.device,
+            selected_groups=selected,
+        )
     elif mode == 'labels':
         if args.action == 'filter':
             from cardio_form.cli.filter_labels import run_filter_labels_job
@@ -74,7 +89,8 @@ def run(args):
             run_filter_labels_job(
                 input_path=args.input,
                 output_path=args.output,
-                user_labels_to_keep=args.labels
+                user_labels_to_keep=args.labels,
+                label_space=args.label_space
             )
         elif args.action == 'merge':
             from cardio_form.cli.merge_labels import run_merge_labels_job
@@ -84,7 +100,8 @@ def run(args):
                 input_path=args.input,
                 output_path=args.output,
                 user_labels_to_keep=args.labels,
-                value_after_merge=args.value_after_merge
+                value_after_merge=args.value_after_merge,
+                label_space=args.label_space
             )
         elif args.action == 'relabel':
             from cardio_form.cli.relabel import run_relabel_job
@@ -93,7 +110,8 @@ def run(args):
             run_relabel_job(
                 input_path=args.input,
                 output_path=args.output,
-                mapping_pairs=args.map
+                mapping_pairs=args.map,
+                label_space=args.label_space
             )
     else:
         raise SystemExit(f"Error: unhandled mode '{args.mode}'.")
@@ -142,6 +160,19 @@ def main():
     
     la_reconstruct_parser.add_argument("--device", default="cpu", choices=['cpu', 'cuda'], help="Device to run the model on.")
 
+    # --- Parser for left-heart completion mode ---
+    left_complete_parser = subparsers.add_parser('left_complete', aliases=['left-complete'], help="Enhance a whole-heart segmentation with the LA network's left-side output.")
+    left_complete_parser.add_argument("-la", "--la-file", default=None, help="LA 3D segmentation NIfTI (overrides -ch2/-ch4).")
+    left_complete_parser.add_argument("-ch2", "--ch2-file", default=None, help="LAX 2-chamber segmentation NIfTI; used when -la/--la-file is absent.")
+    left_complete_parser.add_argument("-ch4", "--ch4-file", default=None, help="LAX 4-chamber segmentation NIfTI; used when -la/--la-file is absent.")
+    left_complete_parser.add_argument("-whs", "--whs-file", required=True, help="Whole-heart segmentation NIfTI to enhance.")
+    left_complete_parser.add_argument("-o", "--output-dir", required=True, help="Directory to save all output files.")
+    left_complete_parser.add_argument("-p", "--output-prefix", required=True, help="Prefix for all output filenames.")
+    left_complete_parser.add_argument("--device", default="cpu", choices=['cpu', 'cuda'], help="Device, used only on the -ch2/-ch4 path.")
+    left_complete_parser.add_argument("--include-la", dest="include_la", action="store_true", help="Merge the LA body.")
+    left_complete_parser.add_argument("--include-lv", dest="include_lv", action="store_true", help="Merge the LV completion.")
+    left_complete_parser.add_argument("--include-veins", dest="include_veins", action="store_true", help="Merge the pulmonary vein classes.")
+
     # --- Parser for label utilities mode ---
     labels_parser = subparsers.add_parser('labels', help='Utilities for editing labels in segmentation files (filter / merge / relabel).')
     labels_parser.add_argument("action", choices=['filter', 'merge', 'relabel'], help="The label utility action to perform.")
@@ -150,6 +181,9 @@ def main():
     labels_parser.add_argument("-l", "--labels", required=False, nargs='+', type=str, help="(filter/merge) A space-separated list of labels. "
                              "Can be names (LV_myo), groups (ventricles), or numbers (5). "
                              "Example: --labels ventricles LA_bp 7")
+    labels_parser.add_argument("--label-space", default=DEFAULT_LABEL_SPACE, choices=sorted(LABEL_SPACES),
+                             help="Which label space the input uses. The 2D segmentation outputs "
+                                  "do NOT use the whole-heart convention.")
     labels_parser.add_argument("-v", "--value-after-merge", required=False, type=int, default=None, help="(merge) The label value to assign to the merged labels.")
     labels_parser.add_argument("-m", "--map", required=False, nargs='+', type=str, help="(relabel) Space-separated OLD:NEW pairs. "
                              "Each side can be a name (MYO_septum) or a number. "
