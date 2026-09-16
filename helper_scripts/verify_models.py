@@ -21,9 +21,9 @@ def main():
     models_to_check = {
         'reconstruction_3d': ['local_dev', 'v0.1.0'], # Can checl other versions by adding to the list
         'la_reconstruction_3d': ['local_dev', 'v0.1.0'],
-        'segment_sax': ['local_dev', 'v0.1.0'],
-        'segment_lax_2ch': ['local_dev', 'v0.1.0'],
-        'segment_lax_4ch': ['local_dev', 'v0.1.0'],
+        'segment_sax': ['local_dev', 'v0.1.0', 'v0.2.0'],
+        'segment_lax_2ch': ['local_dev', 'v0.1.0', 'v0.2.0'],
+        'segment_lax_4ch': ['local_dev', 'v0.1.0', 'v0.2.0'],
     }
 
     all_ok = True

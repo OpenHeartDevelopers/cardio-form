@@ -45,7 +45,7 @@ def _remap_lax_input(input_path, output_path, mapping, allowed_labels, view):
 
 
 def run_la_reconstruction_job(ch2_file, ch4_file, output_dir, output_prefix, device='cpu',
-                              quality_control=False):
+                              quality_control=False, model_version='default'):
     """
     Pure Python function to run the LA 3D reconstruction. 
     Accepts standard types, not argparse objects.
@@ -84,7 +84,10 @@ def run_la_reconstruction_job(ch2_file, ch4_file, output_dir, output_prefix, dev
                 ch4_file, ch4_target, LA_MAP_4CH, RAW_LAX_LABELS_4CH, '4CH',
             )
 
-            pipeline = CardioForm(device=device)
+            pipeline = CardioForm(
+                device=device,
+                model_versions={'la_reconstruction_3d': model_version},
+            )
 
             # Call the high-level method from our pipeline class.
             pipeline.reconstruct_la_3d(
@@ -112,7 +115,8 @@ def main(args):
             output_dir=args.output_dir,
             output_prefix=args.output_prefix,
             device=args.device,
-            quality_control=args.quality_control
+            quality_control=args.quality_control,
+            model_version=args.model_version
         )
     except Exception:
         sys.exit(1)
@@ -132,7 +136,8 @@ if __name__ == "__main__":
     parser.add_argument("-p", "--output-prefix", required=True, help="Prefix for all output filenames (e.g., 'subject_001_cine').")
     
     # --- Configuration Arguments ---
-    parser.add_argument("--model-version", default="default", help="Version of the LA reconstruction model to use (from models.yaml).")
+    parser.add_argument("--model-version", default="default", help="Version of the model weights to use (from models.yaml), e.g. v0.2.0. "
+                             "Leave as 'default' to use the model's declared default.")
     parser.add_argument("--device", default="cpu", choices=['cpu', 'cuda'], help="Device to run the model on.")
     parser.add_argument("-qc", "--quality-control", action="store_true", help="Also write diagnostic artefacts (sparse volume, back-projections, remapped inputs).")
     

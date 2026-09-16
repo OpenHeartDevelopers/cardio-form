@@ -3,6 +3,7 @@ import sys
 import argparse
 import glob as _glob
 
+from cardio_form.config import SEGMENT_MODEL_KEYS
 from cardio_form.utils import configure_logging
 logger = configure_logging(__name__)
 
@@ -40,13 +41,18 @@ def _resolve_view(view_name, explicit_path, input_dir, pattern, flag_hint):
 
 
 def run_full_pipeline_job(output_dir, output_prefix, device='cpu',
-                          input_dir=None, sax_path=None, ch2_path=None, ch4_path=None, quality_control=False):
+                          input_dir=None, sax_path=None, ch2_path=None, ch4_path=None, quality_control=False,
+                          model_version='default'):
     """
     Pure Python function to run the full pipeline.
     Accepts standard types, not argparse objects.
 
     Each view is resolved independently: an explicit *_path argument takes
     precedence; otherwise the file is discovered by glob inside input_dir.
+
+    ``model_version`` applies to all three 2D segmentation models. The 3D
+    reconstruction model is not affected; the retrained weights are 2D-only and
+    there is no matching reconstruction version to select.
     """
     # Imported here, not at module scope: pulls in torch/nnunetv2 (~3.5s).
     from cardio_form.pipeline import CardioForm
@@ -58,7 +64,8 @@ def run_full_pipeline_job(output_dir, output_prefix, device='cpu',
     logger.info("Found all required input CINE images.")
 
     try:
-        pipeline = CardioForm(device=device)
+        model_versions = {key: model_version for key in SEGMENT_MODEL_KEYS.values()}
+        pipeline = CardioForm(device=device, model_versions=model_versions)
 
         pipeline.run_full_pipeline(
             sax_path=sax_path,
@@ -88,7 +95,8 @@ def main(args):
             output_dir=args.output_dir,
             output_prefix=args.output_prefix,
             device=args.device,
-            quality_control=args.quality_control
+            quality_control=args.quality_control,
+            model_version=args.model_version
         )
     except Exception:
         sys.exit(1)
@@ -108,6 +116,8 @@ if __name__ == "__main__":
     parser.add_argument("--device", default="cpu", choices=['auto', 'cpu', 'cuda'], help="Device to run the models on.")
     
     parser.add_argument("-qc", "--quality-control", action="store_true", help="Also write diagnostic artefacts (sparse volume, back-projections).")
+    parser.add_argument("--model-version", default="default", help="Version of the model weights to use (from models.yaml), e.g. v0.2.0. "
+                             "Leave as 'default' to use the model's declared default.")
 
     args = parser.parse_args()
     main(args) 

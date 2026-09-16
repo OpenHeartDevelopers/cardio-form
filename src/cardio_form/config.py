@@ -70,6 +70,15 @@ def label_space_path(space: str = DEFAULT_LABEL_SPACE) -> Path:
     return config_path(LABEL_SPACES[space])
 
 
-# Valid cardiac view identifiers. Defined here rather than in pipeline.py so the
-# CLI can build its argparse choices without importing the heavy model stack.
-CHOICES_VIEW_TYPE = ['sax', 'lax_2ch', 'lax_4ch']
+# The models.yaml key holding each view's 2D segmentation model. Defined here
+# rather than in pipeline.py so the CLI can map a --model-version onto the right
+# manifest key without importing the heavy model stack.
+SEGMENT_MODEL_KEYS = {
+    "sax": "segment_sax",
+    "lax_2ch": "segment_lax_2ch",
+    "lax_4ch": "segment_lax_4ch",
+}
+
+# Valid cardiac view identifiers. Derived from SEGMENT_MODEL_KEYS so the two
+# cannot drift apart.
+CHOICES_VIEW_TYPE = list(SEGMENT_MODEL_KEYS)

@@ -23,21 +23,29 @@ class CardioForm:
     A high-level API for the Cardiac MRI processing pipeline.
     This class uses LAZY LOADING for all models to improve efficiency.
     """
-    def __init__(self, device: str = 'cpu'):
+    def __init__(self, device: str = 'cpu', model_versions: dict = None):
         """
         Initializes the pipeline. THIS IS A VERY FAST, LIGHTWEIGHT OPERATION.
         No models are loaded at this stage.
 
         Args:
             device (str): The device to run models on ('auto', 'cpu', 'cuda').
+            model_versions (dict): Maps a models.yaml key (e.g. 'segment_sax')
+                to the version to resolve for it. Keys left out fall back to
+                that model's 'default'. Injected here rather than read from a
+                global, so one process can hold pipelines on different versions.
         """
         if device == 'auto':
             import torch
             self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         else:
             self.device = device
-        
+
+        self.model_versions = dict(model_versions or {})
+
         logger.info(f"CardioForm pipeline configured for device: '{self.device}'")
+        if self.model_versions:
+            logger.info(f"Model version overrides: {self.model_versions}")
         
         # --- State variables ---
         # We store the model OBJECTS here, but initialize them to None.
@@ -47,6 +55,11 @@ class CardioForm:
         self._la_recon_model = None # 3D LA 3D segmentation 
         self._lax_2ch_seg_model = None # For the future
         self._lax_4ch_seg_model = None # For the future
+
+    def _model_path(self, manifest_key: str) -> str:
+        """Resolve one manifest key, honouring this pipeline's version overrides."""
+        version = self.model_versions.get(manifest_key, 'default')
+        return default_model_manager.get_model_path(manifest_key, version)
 
     @property
     def recon_model(self):
@@ -58,7 +71,7 @@ class CardioForm:
         """
         if self._recon_model is None:
             logger.info("Loading reconstruction model for the first time...")
-            model_path = default_model_manager.get_model_path('reconstruction_3d')
+            model_path = self._model_path('reconstruction_3d')
             self._recon_model = reconstruct_3d.load_model(model_path, self.device)
         return self._recon_model
 
@@ -66,7 +79,7 @@ class CardioForm:
     def la_recon_model(self) : 
         if self._la_recon_model is None: 
             logger.info("Loading LA reconstruction model for the first time... ") 
-            model_path = default_model_manager.get_model_path('la_reconstruction_3d')
+            model_path = self._model_path('la_reconstruction_3d')
             self._la_recon_model = reconstruct_la.load_la_model(model_path, self.device)
         return self._la_recon_model
 
@@ -75,7 +88,7 @@ class CardioForm:
         """Lazy-gets the path to the SAX segmentation model CHECKPOINT FILE."""
         if self._sax_seg_model is None:
             logger.info("Locating SAX segmentation model...")
-            self._sax_seg_model = default_model_manager.get_model_path('segment_sax')
+            self._sax_seg_model = self._model_path('segment_sax')
         return self._sax_seg_model
 
     @property
@@ -83,7 +96,7 @@ class CardioForm:
         """Lazy-gets the path to the LAX 2CH segmentation model CHECKPOINT FILE."""
         if self._lax_2ch_seg_model is None:
             logger.info("Locating LAX 2CH segmentation model...")
-            self._lax_2ch_seg_model = default_model_manager.get_model_path('segment_lax_2ch')
+            self._lax_2ch_seg_model = self._model_path('segment_lax_2ch')
         return self._lax_2ch_seg_model
 
     @property
@@ -91,7 +104,7 @@ class CardioForm:
         """Lazy-gets the path to the LAX 4CH segmentation model CHECKPOINT FILE."""
         if self._lax_4ch_seg_model is None:
             logger.info("Locating LAX 4CH segmentation model...")
-            self._lax_4ch_seg_model = default_model_manager.get_model_path('segment_lax_4ch')
+            self._lax_4ch_seg_model = self._model_path('segment_lax_4ch')
         return self._lax_4ch_seg_model
 
     # --- Public Methods ---

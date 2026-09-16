@@ -1,21 +1,27 @@
 import sys
 import argparse
 
-from cardio_form.config import CHOICES_VIEW_TYPE
+from cardio_form.config import CHOICES_VIEW_TYPE, SEGMENT_MODEL_KEYS
 from cardio_form.utils import configure_logging
 logger = configure_logging('ScriptSegment2D')
 
-def run_segmentation_job(input_path, output_dir, view_type, output_prefix, device='cpu'):  
+def run_segmentation_job(input_path, output_dir, view_type, output_prefix, device='cpu',
+                         model_version='default'):
     """
     Pure Python function to run the segmentation. 
     Accepts standard types, not argparse objects.
+
+    ``model_version`` selects which entry of the view's models.yaml stanza to
+    resolve. Only the segmented view's model is named, so the other two keep
+    their defaults.
     """
     # Imported here, not at module scope: pulls in torch/nnunetv2 (~3.5s).
     from cardio_form.pipeline import CardioForm
     logger.info("--- Initializing CardioForm Pipeline ---")
     
     try:
-        pipeline = CardioForm(device=device)
+        model_versions = {SEGMENT_MODEL_KEYS[view_type]: model_version}
+        pipeline = CardioForm(device=device, model_versions=model_versions)
         
         # Call the high-level method from our pipeline class.
         pipeline.segment(
@@ -41,7 +47,8 @@ def main(args):
             output_dir=args.output_dir,
             view_type=args.view_type,
             output_prefix=args.output_prefix,
-            device=args.device
+            device=args.device,
+            model_version=args.model_version
         )
     except Exception:
         sys.exit(1)
@@ -58,6 +65,8 @@ if __name__ == "__main__":
     parser.add_argument("--view-type", required=True, choices=CHOICES_VIEW_TYPE, help="The type of cardiac view to segment.")
     parser.add_argument("-p", "--output-prefix", required=True, help="Prefix for the output filename (e.g., 'subject_001_cine').")
     parser.add_argument("--device", default="auto", choices=['auto', 'cpu', 'cuda'], help="Device to run the model on.")
+    parser.add_argument("--model-version", default="default", help="Version of the model weights to use (from models.yaml), e.g. v0.2.0. "
+                             "Leave as 'default' to use the model's declared default.")
     
     args = parser.parse_args()
 

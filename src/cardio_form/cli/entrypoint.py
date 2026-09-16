@@ -45,7 +45,8 @@ def run(args):
             output_dir=args.output_dir,
             view_type=args.view_type,
             output_prefix=args.output_prefix,
-            device=args.device
+            device=args.device,
+            model_version=args.model_version
         )
     elif mode == 'full_pipeline':
         from cardio_form.cli.full_pipeline import run_full_pipeline_job
@@ -57,7 +58,8 @@ def run(args):
             output_dir=args.output_dir,
             output_prefix=args.output_prefix,
             device=args.device,
-            quality_control=args.quality_control
+            quality_control=args.quality_control,
+            model_version=args.model_version
         )
 
     elif mode == 'reconstruct_la':
@@ -68,7 +70,8 @@ def run(args):
             output_dir=args.output_dir,
             output_prefix=args.output_prefix,
             device=args.device,
-            quality_control=args.quality_control
+            quality_control=args.quality_control,
+            model_version=args.model_version
         )
     elif mode == 'left_complete':
         from cardio_form.cli.left_complete import run_left_complete_job, SELECTION_GROUPS
@@ -146,6 +149,8 @@ def main():
     segment_parser = subparsers.add_parser('segment', parents=[ml_parent_parser], help='Run 2D segmentation on a cardiac MRI NIfTI file.')
     segment_parser.add_argument("--input", required=True, help="Path to the input NIfTI file.")
     segment_parser.add_argument("--view-type", required=True, choices=CHOICES_VIEW_TYPE, help="The type of cardiac view to segment.")
+    segment_parser.add_argument("--model-version", default="default", help="Version of the model weights to use (from models.yaml), e.g. v0.2.0. "
+                                 "Leave as 'default' to use the model's declared default.")
 
     # --- Parser for full_pipeline mode ---
     full_pipeline_parser = subparsers.add_parser('full_pipeline', parents=[ml_parent_parser], aliases=['full'], help='Run the full CardioForm pipeline: 2D Segmentation -> 3D Reconstruction.')
@@ -154,6 +159,8 @@ def main():
     full_pipeline_parser.add_argument("-ch2", "--ch2-file", default=None, help="Path to 2CH NIfTI (overrides discovery from --input-dir).")
     full_pipeline_parser.add_argument("-ch4", "--ch4-file", default=None, help="Path to 4CH NIfTI (overrides discovery from --input-dir).")
     full_pipeline_parser.add_argument("-qc", "--quality-control", action="store_true", help="Also write diagnostic artefacts (sparse volume, back-projections, remapped inputs).")
+    full_pipeline_parser.add_argument("--model-version", default="default", help="Version of the model weights to use (from models.yaml), e.g. v0.2.0. "
+                                 "Leave as 'default' to use the model's declared default.")
 
     # --- Parser for LA reconstruction mode ---
     la_reconstruct_parser = subparsers.add_parser('reconstruct_la', aliases=['la_3d'], help='Run LA 3D reconstruction from 2D segmentations.')
@@ -165,6 +172,8 @@ def main():
     
     la_reconstruct_parser.add_argument("--device", default="cpu", choices=['cpu', 'cuda'], help="Device to run the model on.")
     la_reconstruct_parser.add_argument("-qc", "--quality-control", action="store_true", help="Also write diagnostic artefacts (sparse volume, back-projections, remapped inputs).")
+    la_reconstruct_parser.add_argument("--model-version", default="default", help="Version of the model weights to use (from models.yaml), e.g. v0.2.0. "
+                                 "Leave as 'default' to use the model's declared default.")
 
     # --- Parser for left-heart completion mode ---
     left_complete_parser = subparsers.add_parser('left_complete', aliases=['left-complete'], help="Enhance a whole-heart segmentation with the LA network's left-side output.")
