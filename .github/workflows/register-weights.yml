@@ -1,0 +1,56 @@
+name: Register Model Weights
+
+# Run by `cardioform-train publish` after it uploads weights to a draft
+# release, or by hand from the Actions tab. Validates the release assets and
+# opens a PR that adds the new versions to models.yaml. It never changes
+# `default:` and never publishes the release.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Draft release tag holding the weights, e.g. v0.3.0-models"
+        required: true
+
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write       # read draft releases, push the PR branch
+      pull-requests: write  # open the PR
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # cardio_form.packaging is stdlib-only, so it is imported from src/
+      # through PYTHONPATH; the conda scientific stack is not needed here.
+      - name: Install script dependencies
+        run: pip install ruamel.yaml
+
+      - name: Validate assets and update models.yaml
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PYTHONPATH: src
+          TAG: ${{ inputs.tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          python helper_scripts/register_weights.py \
+            --tag "$TAG" \
+            --repo "$REPO" \
+            --manifest src/cardio_form/config_data/models.yaml \
+            --pr-body-out "$RUNNER_TEMP/pr_body.md"
+
+      - name: Open pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: weights/${{ inputs.tag }}
+          title: "Register weights ${{ inputs.tag }}"
+          commit-message: "models.yaml: register weights ${{ inputs.tag }}"
+          body-path: ${{ runner.temp }}/pr_body.md
+          add-paths: src/cardio_form/config_data/models.yaml

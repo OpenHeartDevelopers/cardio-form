@@ -1,6 +1,8 @@
 # helper_scripts/verify_models.py
 # Run after `pip install -e .` (cardio_form is importable from the installed package).
 
+import yaml
+
 from cardio_form.models import ModelManager
 
 def main():
@@ -17,14 +19,11 @@ def main():
         print(f"FATAL: Could not initialize ModelManager. Error: {e}")
         return
 
-    # A list of all the model keys we expect to find in models.yaml
-    models_to_check = {
-        'reconstruction_3d': ['local_dev', 'v0.1.0'], # Can checl other versions by adding to the list
-        'la_reconstruction_3d': ['local_dev', 'v0.1.0'],
-        'segment_sax': ['local_dev', 'v0.1.0', 'v0.2.0'],
-        'segment_lax_2ch': ['local_dev', 'v0.1.0', 'v0.2.0'],
-        'segment_lax_4ch': ['local_dev', 'v0.1.0', 'v0.2.0'],
-    }
+    # Check every version of every model listed in the manifest, so a newly
+    # registered version is covered without editing this script.
+    with open(manager.manifest_path, 'r') as f:
+        manifest = yaml.safe_load(f)
+    models_to_check = {key: list(info['versions']) for key, info in manifest.items()}
 
     all_ok = True
     for model_name, versions in models_to_check.items():

@@ -6,6 +6,8 @@ on:
 
 jobs:
   build-and-push:
+    # Weights-only releases (tags ending in -models) carry no code change.
+    if: ${{ !endsWith(github.event.release.tag_name, '-models') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
