@@ -54,7 +54,7 @@ segment_lax_2ch:
       url: "https://github.com/OpenHeartDevelopers/cardio-form/releases/download/v0.1.0-models/segment_lax_ch2.zip" 
       sha256: 003420fc6012e94d5591ca0b6e1b3c2ea0c6c02eaacc8e9037d7419894f87ab0
     v0.2.0:
-      url: "https://github.com/OpenHeartDevelopers/cardio-form/releases/download/v0.2.0-models/segment_lax_4ch_v0.2.0.zip"
+      url: "https://github.com/OpenHeartDevelopers/cardio-form/releases/download/v0.2.0-models/segment_lax_2ch_v0.2.0.zip"
       sha256: c5bc9ac7564387414c4cabd03cff9d870ee8a8424afd6aecd0b4ad771aa72ca9
     local_dev:
       url: "file://weights/segment_lax_ch2/fold_all/checkpoint_final.pth"
